@@ -1,0 +1,19 @@
+Instruções para correr os simuladores
+
+1 - cd ~/catkin_ws
+
+2 - catkin_make
+
+3 - source /opt/ros/kinetic/setup.bash
+  - source ~/catkin_ws/devel/setup.bash
+
+4 - Para dar Launch de display mode: roslaunch niryo_one_description display.
+  - Para dar Launch do Nyrio ROS stack completo: roslaunch niryo_one_bringup desktop_rviz_simulation.launch
+
+5 - Na pasta Tese está o Niryo One Studio, é abrir, ir para a pasta, abrir terminal e fazer ./NiryoOneStudio
+
+6 - Para usar o Niryon One Studio, ligar ao localhost
+
+7 - PYTHONPATH=. python examples/simple_scripts/first_use_example.py
+
+

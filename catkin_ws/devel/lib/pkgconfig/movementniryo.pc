@@ -1,0 +1,8 @@
+prefix=/home/pedro/catkin_ws/devel
+
+Name: movementniryo
+Description: Description of movementniryo
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

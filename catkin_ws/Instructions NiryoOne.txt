@@ -1,0 +1,27 @@
+Configurar Rede Câmera:
+	-Ativar hotspot pelo celular
+Configurar Rede Robô:
+  -OPT: ETHERNET:
+	-Conectar o cabo ao robô e ao PC
+	-Ir em Settings > Network & internet > Ethernet e configurar:
+		IP assignment: Manual
+		IPv4 address: 169.254.200.201
+		IPv4 mask: 255.255.255.0
+		IPv4 gateway: 169.254.1.1
+		DNS server assignment: Manual
+		IPv4 DNS servers: 8.8.8.8
+  -OPT: HOTSPOT:
+	-Apertar e manter pressionado o botão preto do robô por mais de 7 segundos.
+		- Até os LEDS ficarem azuis
+	-Ir ao PC e conectar a uma rede chamada “Niryo_One + numbers” 
+		- Senha: niryoone
+
+Niryo Studio:
+	-Conectar ao robô com o IP 169.254.200.200 (ETHERNET) ou 10.10.10.10 (HOTSPOT)
+
+ROS:
+	-Ativar o ambiente ROS por meio do comando no bash: 
+		roslaunch niryo_one_bringup desktop_rviz_simulation.launch
+
+-> Rodar os programas em Python...
+		
