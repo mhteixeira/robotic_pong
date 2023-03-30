@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 from helpers import resize_image
 
-cap = cv2.VideoCapture('refactoring_cv/examples/example1.avi')
+cap = cv2.VideoCapture('refactoring_cv/examples/example15.avi')
  
 # Check if camera opened successfully
 if (cap.isOpened()== False): 

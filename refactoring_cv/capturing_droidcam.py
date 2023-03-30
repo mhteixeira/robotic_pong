@@ -2,7 +2,9 @@
 # video using OpenCV
    
 import cv2
-   
+import time
+
+time.sleep(5)
 # Create an object to read 
 # from camera
 video = cv2.VideoCapture(1)
@@ -22,7 +24,7 @@ size = (frame_width, frame_height)
 # Below VideoWriter object will create
 # a frame of above defined The output 
 # is stored in 'filename.avi' file.
-result = cv2.VideoWriter('filename.avi', 
+result = cv2.VideoWriter(f'example{time.time()}.avi', 
                          cv2.VideoWriter_fourcc(*'MJPG'),
                          10, size)
     

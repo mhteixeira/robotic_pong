@@ -338,7 +338,7 @@ if __name__ == "__main__":
 			deslocamento = np.array([dX, dY])
 
 			print("deslocamento",distance_pix)
-			
+
 			velocity_array = np.array([vX, vY])
 
 			momentum = ball_mass*velocity_array
@@ -369,8 +369,8 @@ if __name__ == "__main__":
 					goal_point = (goal_point_X, goal_point_Y)
 
 			#Detect if the ball hits a wall and predict the reflected trajectory
-			#Assumptions: 
-			#1) The ball does not lose velocity 
+			#Assumptions:
+			#1) The ball does not lose velocity
 			#2) The incident angle is the same as the reflected angle
 			for i in range(1,10):
 				if pos_next[i-1][1] >= max_y_bottom and distance_pix >= 3 and detected == n_arucos:

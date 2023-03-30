@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from params import *
 
 def resize_image(img, scale_percent):
@@ -9,6 +10,27 @@ def resize_image(img, scale_percent):
     # resize image
     resized = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
     return(resized)
+
+def line_limits(corners, frame):
+    m, n = np.polyfit(corners[:, 0], corners[:, 1], 1)
+    h, w, _ = frame.shape
+    possible_limits = np.array([
+        (0, int(n)),            # f(0) = y
+        (w, int(w*m + n)),      # f(w) = y
+        (int(-n/m), 0),         # f(x) = 0 = m*x + n => x = -n/m
+        (int((h - n)/m), h)     # f(x) = h = m*x + n => x = (h - n)/m
+    ])
+    points_inside_frame = [
+        True if is_point_inside_frame(point, h, w) else False 
+        for point in possible_limits]
+    limits = possible_limits[points_inside_frame]
+    return limits
+
+
+def is_point_inside_frame(point, h, w):
+    if (0 <= point[0] <= w) and (0 <= point[1] <= h):
+        return True
+    return False
 
 def detectBall(frame):
     frame = frame.copy()
