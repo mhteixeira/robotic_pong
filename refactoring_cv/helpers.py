@@ -51,8 +51,30 @@ def detectBall(frame):
         ((x, y), radius) = cv2.minEnclosingCircle(c)
         diameter = 2*radius
         M = cv2.moments(c)
-        center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-        cv2.circle(frame, (int(x), int(y)), int(radius), (0, 0, 255), 2)
-        return frame, frame_cnts, x, y, radius
+        if diameter > 10:
+            center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+            cv2.circle(frame, (int(x), int(y)), int(radius), (0, 0, 255), 2)
+            return True, frame, frame_cnts, x, y, radius
     print("Ball not detected")
-    return frame, [], 0, 0, 0
+    return False, frame, [], 0, 0, 0
+
+# def predict_ball_target():
+
+
+def delimit_field(frame, n_arucos):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
+    parameters =  cv2.aruco.DetectorParameters_create()
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+    frame_markers = cv2.aruco.drawDetectedMarkers(frame.copy(), corners, ids)
+    corners = np.array(corners, dtype=int)
+    if len(corners) == n_arucos:
+        # The top left corner is identified by the Aruco with ID = 0
+        top_left_corner_id = np.where(ids == 0)[0]
+        # The top left corner is identified by the Aruco with ID = 0
+        bottom_right_corner_id = np.where(ids == 1)[0]
+        top_left_corner = corners[top_left_corner_id][0][0][0]
+        bottom_right_corner = corners[bottom_right_corner_id][0][0][0]
+
+        return True, frame, [top_left_corner, bottom_right_corner]
+    return False, frame_markers, [[], []]
