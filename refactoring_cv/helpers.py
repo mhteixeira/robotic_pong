@@ -51,7 +51,7 @@ def detectBall(frame):
         ((x, y), radius) = cv2.minEnclosingCircle(c)
         diameter = 2*radius
         M = cv2.moments(c)
-        if diameter > 10:
+        if diameter > 20:
             center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
             cv2.circle(frame, (int(x), int(y)), int(radius), (0, 0, 255), 2)
             return True, frame, frame_cnts, x, y, radius
@@ -76,5 +76,5 @@ def delimit_field(frame, n_arucos):
         top_left_corner = corners[top_left_corner_id][0][0][0]
         bottom_right_corner = corners[bottom_right_corner_id][0][0][0]
 
-        return True, frame, [top_left_corner, bottom_right_corner]
+        return True, frame_markers, [top_left_corner, bottom_right_corner]
     return False, frame_markers, [[], []]
