@@ -5,7 +5,7 @@ from helpers import resize_image, detectBall, is_point_inside_frame, line_limits
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-filepath = 'refactoring_cv/examples/example54.avi'
+filepath = 'refactoring_cv/examples/example56.avi'
 cap = cv2.VideoCapture(filepath)
 # cap = cv2.VideoCapture(1)
 # Check if camera opened successfully
@@ -65,7 +65,7 @@ for i, value in enumerate(windows):
   while (not is_field_delimited):
     ret, frame = cap.read()
     if ret == True:
-      frame = resize_image(frame, 100)
+      frame = resize_image(frame, 60)
       is_field_delimited, frame_markers, corners = delimit_field(frame, n_arucos)
       if (is_field_delimited):
         top_left_corner = corners[0]
@@ -84,7 +84,7 @@ for i, value in enumerate(windows):
 
     ret, frame = cap.read()
     if ret == True:
-      frame = resize_image(frame, 100)
+      frame = resize_image(frame, 60)
       h_frame, w_frame, _ = frame.shape
 
       # Delimit field again to make the system robust to 
