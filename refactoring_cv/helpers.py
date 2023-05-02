@@ -32,21 +32,21 @@ def is_ball_inside_field(x, y, x_min, y_min, x_max, y_max):
         return True
     return False
 
-def detect_ball(frame):
+def detect_ball(frame, output_frame):
     # First we blur the image with a GaussianBlur
     blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     
     # Construct a HSV mask for the green color
     hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, greenLower, greenUpper)
-    
+
     # Erode and dilate the result to remove small noises
     mask = cv2.erode(mask, None, iterations=2)
     mask = cv2.dilate(mask, None, iterations=2)
     
     # Then we calculate the countours of the resulting image
     frame_cnts, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    # cv2.drawContours(frame, frame_cnts, -1, (0, 0, 255), 2)
+    cv2.drawContours(output_frame, frame_cnts, -1, (0, 0, 255), 2)
     
     if len(frame_cnts) > 0:
         # If we have contours, we get the one with the greatest area
@@ -63,16 +63,16 @@ def detect_ball(frame):
         # the contour is considered to be the ball
         if ((len(approx) > 8) & (len(approx) < 23) & (M["m00"] > minimum_ball_area)):
             center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-            cv2.circle(frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
+            cv2.circle(output_frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
 
-            return True, frame, frame_cnts, x, y, radius
-    return False, frame, [], 0, 0, 0
+            return True, output_frame, frame_cnts, x, y, radius
+    return False, output_frame, [], 0, 0, 0
 
-def predict_ball_target(frame, kf, ball_position, xd_array, yd_array, x_robot_corner, top_left_corner, bottom_right_corner, y_preds, is_going_to_bounce):
+def predict_ball_target(frame, kf, ball_position, xd_array, yd_array, x_robot_corner, top_left_corner, bottom_right_corner, y_preds, is_going_to_bounce, current_pred):
     # Kalman predictions
     kf.correct(np.array(ball_position, dtype=np.float32))
     _, _, xd_pred, yd_pred = kf.predict()
-    y_pred = (bottom_right_corner[1] - top_left_corner[1]) / 2  + top_left_corner[1]
+    y_pred = current_pred
     field_height = (bottom_right_corner[1] - top_left_corner[1])
     if xd_pred and yd_pred:
         xd_array.append(xd_pred)
@@ -98,7 +98,7 @@ def predict_ball_target(frame, kf, ball_position, xd_array, yd_array, x_robot_co
                     if (number_of_refletions % 2 == 1):
                         y_pred = top_left_corner[1] + (overshoot_y % field_height)
                     if (number_of_refletions % 2 == 0):
-                        y_pred = overshoot_y % field_height
+                        y_pred = bottom_right_corner[1] - overshoot_y % field_height
                     current_x = ball_position[0]
                     next_x = ball_position[0]
                     current_y = ball_position[1]
@@ -107,22 +107,24 @@ def predict_ball_target(frame, kf, ball_position, xd_array, yd_array, x_robot_co
                         if n % 2 == 1:
                             next_x = (top_left_corner[1] - current_y)/slope + current_x
                             next_y = top_left_corner[1]
-                            cv2.line(frame, (int(current_x), int(current_y)), (int(next_x), top_left_corner[1]), (255, 200, 200), 1)     
+                            cv2.line(frame, (int(current_x), int(current_y)), (int(next_x), top_left_corner[1]), predict_line_color, 1)     
                         if n % 2 == 0:
                             next_x = -(bottom_right_corner[1] - current_y)/slope + current_x
                             next_y = bottom_right_corner[1]
-                            image = cv2.line(frame, (int(current_x), int(current_y)), (int(next_x), bottom_right_corner[1]), (255, 200, 200), 1)     
+                            image = cv2.line(frame, (int(current_x), int(current_y)), (int(next_x), bottom_right_corner[1]), predict_line_color, 1)     
                         current_x = next_x
                         current_y = next_y
-                    image = cv2.line(frame, (int(current_x), int(current_y)), (int(x_robot_corner), int(y_pred)), (255, 200, 200), 1)     
+                    image = cv2.line(frame, (int(current_x), int(current_y)), (int(x_robot_corner), int(y_pred)), predict_line_color, 1)     
             elif initial_y_pred > bottom_right_corner[1]:
+
                 overshoot_y = abs(initial_y_pred - bottom_right_corner[1])
                 number_of_refletions = np.ceil(abs(overshoot_y / field_height)).astype(int)
+                
                 if number_of_refletions <= max_number_of_refletions:
                     if (number_of_refletions % 2 == 1):
                         y_pred = bottom_right_corner[1] - (overshoot_y % field_height)
                     if (number_of_refletions % 2 == 0):
-                        y_pred = overshoot_y % field_height
+                        y_pred = overshoot_y % field_height + top_left_corner[1]
                     current_x = ball_position[0]
                     next_x = ball_position[0]
                     current_y = ball_position[1]
@@ -131,17 +133,17 @@ def predict_ball_target(frame, kf, ball_position, xd_array, yd_array, x_robot_co
                         if n % 2 == 1:
                             next_x = (bottom_right_corner[1] - current_y)/slope + current_x
                             next_y = bottom_right_corner[1]
-                            cv2.line(frame, (int(current_x), int(current_y)), (int(next_x), bottom_right_corner[1]), (255, 200, 200), 1)     
+                            cv2.line(frame, (int(current_x), int(current_y)), (int(next_x), bottom_right_corner[1]), predict_line_color, 1)     
                         if n % 2 == 0:
                             next_x = -(top_left_corner[1] - current_y)/slope + current_x
                             next_y = top_left_corner[1]
-                            image = cv2.line(frame, (int(current_x), int(current_y)), (int(next_x), top_left_corner[1]), (255, 200, 200), 1)     
+                            image = cv2.line(frame, (int(current_x), int(current_y)), (int(next_x), top_left_corner[1]), predict_line_color, 1)     
                         current_x = next_x
                         current_y = next_y
-                    image = cv2.line(frame, (int(current_x), int(current_y)), (int(x_robot_corner), int(y_pred)), (255, 200, 200), 1)     
+                    image = cv2.line(frame, (int(current_x), int(current_y)), (int(x_robot_corner), int(y_pred)), predict_line_color, 1)     
             else:
                 y_pred = initial_y_pred
-                image = cv2.line(frame, (int(ball_position[0]), int(ball_position[1])), (int(x_robot_corner), int(y_pred)), (255, 200, 200), 1) 
+                image = cv2.line(frame, (int(ball_position[0]), int(ball_position[1])), (int(x_robot_corner), int(y_pred)), predict_line_color, 1) 
         if xd < 0:
             xd_array = []
             yd_array = []

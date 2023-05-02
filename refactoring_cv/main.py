@@ -12,7 +12,8 @@ from matplotlib.lines import Line2D
 from params import *
 
 # Open the video or camera
-cap = cv2.VideoCapture('refactoring_cv/examples/example52.avi')
+filename = './refactoring_cv/examples/example71.avi'
+cap = cv2.VideoCapture(filename)
 # cap = cv2.VideoCapture(1)
 
 # Check if camera opened successfully
@@ -25,7 +26,7 @@ else:
 	h_frame, w_frame, _ = frame.shape
 	size = (w_frame, h_frame)
 
-result = cv2.VideoWriter(f'./refactoring_cv/examples/processed_video.avi', 
+result = cv2.VideoWriter(f'./refactoring_cv/examples/processed_{filename.split("/")[-1]}', 
                          cv2.VideoWriter_fourcc(*'MJPG'),
                          10, size)
     
@@ -47,19 +48,18 @@ kf.transitionMatrix = np.array([[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0,
 
 # First make sure that the field is delimited
 is_field_delimited = False
-while (not is_field_delimited):
+while ((not is_field_delimited) and cap.isOpened()):
 	ret, frame = cap.read()
-	
 	if ret == True:
 		frame = resize_image(frame, resize_factor)
-		is_field_delimited, frame_markers, corners = delimit_field(frame)
+		is_field_delimited, output_frame, corners = delimit_field(frame)
 		if (is_field_delimited):
 			top_left_corner = corners[0]
 			bottom_right_corner = corners[1]
 			field_height = bottom_right_corner[1] - top_left_corner[1]
 			x_robot_corner = bottom_right_corner[0]
-			frame_markers = cv2.rectangle(frame_markers, top_left_corner, bottom_right_corner, color=(200, 200, 200), thickness=2)
-		cv2.imshow('Original',frame_markers)
+			output_frame = cv2.rectangle(output_frame, top_left_corner, bottom_right_corner, color=field_limits_rect_color, thickness=2)
+		cv2.imshow('Processed',output_frame)
 		# Press Q on keyboard to  exit
 		if cv2.waitKey(25) & 0xFF == ord('q'):
 			break
@@ -68,7 +68,6 @@ while (not is_field_delimited):
 
 # Start the processing
 while(cap.isOpened()):
-	
 	ret, frame = cap.read()
 	if ret == True:
 		frame = resize_image(frame, resize_factor)
@@ -76,28 +75,28 @@ while(cap.isOpened()):
 
 		# Delimit field again to make the system robust to 
 		# changes in position of the arucos and the camera
-		is_field_delimited, frame_markers, corners = delimit_field(frame)
+		is_field_delimited, output_frame, corners = delimit_field(frame)
 		if (is_field_delimited):
 			top_left_corner = corners[0]
 			bottom_right_corner = corners[1]
 			field_height = bottom_right_corner[1] - top_left_corner[1]
 			x_robot_corner = bottom_right_corner[0]
-			frame = cv2.rectangle(frame_markers, top_left_corner, bottom_right_corner, color=(200, 200, 200), thickness=1)
+		output_frame = cv2.rectangle(output_frame, top_left_corner, bottom_right_corner, color=field_limits_rect_color, thickness=2)
 
 		# Detect the ball
-		is_ball_detected, _, _, x, y, radius = detect_ball(frame)
+		is_ball_detected, _, _, x, y, radius = detect_ball(frame, output_frame)
 		
 		# If the ball is going to bounce, don't predict at the edges, due to instability
 		if(is_going_to_bounce):
-			ball_inside_field = is_ball_inside_field(x, y, top_left_corner[0], top_left_corner[1] + 30, bottom_right_corner[0], bottom_right_corner[1] - 30)
+			ball_inside_field = is_ball_inside_field(x, y, top_left_corner[0], top_left_corner[1] + bounce_margin_size, bottom_right_corner[0], bottom_right_corner[1] - bounce_margin_size)
 		else:
 			ball_inside_field = is_ball_inside_field(x, y, top_left_corner[0], top_left_corner[1], bottom_right_corner[0], bottom_right_corner[1])
 		
 		# The prediction only makes sense if the ball is present
 		if (is_ball_detected and ball_inside_field):
-			frame_markers, y_pred, xd_pred, yd_pred, is_going_to_bounce = predict_ball_target(frame_markers, kf, [x, y], xd_array, yd_array, x_robot_corner, top_left_corner, bottom_right_corner, y_preds, is_going_to_bounce)
-			frame = cv2.circle(frame, (int(x), int(y)), radius=int(radius), color=(100, 255, 100), thickness=2)
-			frame = cv2.arrowedLine(frame, (int(x), int(y)), (int(x+10*xd_pred), int(y+10*yd_pred)), (255, 0, 0), 2) 
+			output_frame, y_pred, xd_pred, yd_pred, is_going_to_bounce = predict_ball_target(output_frame, kf, [x, y], xd_array, yd_array, x_robot_corner, top_left_corner, bottom_right_corner, y_preds, is_going_to_bounce, y_pred)
+			output_frame = cv2.circle(output_frame, (int(x), int(y)), radius=int(radius), color=(100, 255, 100), thickness=2)
+			output_frame = cv2.arrowedLine(output_frame, (int(x), int(y)), (int(x+10*xd_pred), int(y+10*yd_pred)), (255, 0, 0), 2) 
 		else:
 			xd_array = []
 			yd_array = []
@@ -105,12 +104,12 @@ while(cap.isOpened()):
 		y_preds.append(y_pred)
 		y_robot = y_pred if len(y_preds) > 20 else np.mean(y_preds[-20:])
 		if (is_going_to_bounce):
-			frame = cv2.line(frame, (top_left_corner[0], top_left_corner[1] + 30),  (bottom_right_corner[0], top_left_corner[1] + 30), color=(0, 0, 255), thickness=1)
-			frame = cv2.line(frame, (top_left_corner[0], bottom_right_corner[1] - 30), (bottom_right_corner[0], bottom_right_corner[1] - 30), color=(0, 0, 255), thickness=1)
-		frame = cv2.rectangle(frame, (int(x_robot_corner - 6), int(y_robot - 30)), (int(x_robot_corner + 6), int(y_robot + 30)), color=(255, 255, 255), thickness=-1)
+			output_frame = cv2.line(output_frame, (top_left_corner[0], top_left_corner[1] + bounce_margin_size),  (bottom_right_corner[0], top_left_corner[1] + bounce_margin_size), color=(0, 0, 255), thickness=1)
+			output_frame = cv2.line(output_frame, (top_left_corner[0], bottom_right_corner[1] - bounce_margin_size), (bottom_right_corner[0], bottom_right_corner[1] - bounce_margin_size), color=(0, 0, 255), thickness=1)
+		output_frame = cv2.rectangle(output_frame, (int(x_robot_corner - 6), int(y_robot - 30)), (int(x_robot_corner + 6), int(y_robot + 30)), color=(255, 255, 255), thickness=-1)
 			
-		cv2.imshow('Processed', frame)
-		result.write(frame)
+		cv2.imshow('Processed', output_frame)
+		result.write(output_frame)
 		
 		# Press Q on keyboard to  exit
 		if cv2.waitKey(25) & 0xFF == ord('q'):
