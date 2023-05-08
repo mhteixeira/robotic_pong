@@ -26,7 +26,6 @@ def line_limits(corners, frame):
     limits = possible_limits[points_inside_frame]
     return limits
 
-
 def is_ball_inside_field(x, y, x_min, y_min, x_max, y_max):
     if (x_min <= x <= x_max) and (y_min <= y <= y_max):
         return True
@@ -46,7 +45,7 @@ def detect_ball(frame, output_frame):
     
     # Then we calculate the countours of the resulting image
     frame_cnts, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    cv2.drawContours(output_frame, frame_cnts, -1, (0, 0, 255), 2)
+    # cv2.drawContours(output_frame, frame_cnts, -1, (0, 0, 255), 2)
     
     if len(frame_cnts) > 0:
         # If we have contours, we get the one with the greatest area
@@ -61,7 +60,7 @@ def detect_ball(frame, output_frame):
 
         # If the shape is close to a circle and the area is greater than the minimum
         # the contour is considered to be the ball
-        if ((len(approx) > 8) & (len(approx) < 23) & (M["m00"] > minimum_ball_area)):
+        if ((len(approx) > 6) & (len(approx) < 23) & (M["m00"] > minimum_ball_area)):
             center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
             cv2.circle(output_frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
 
@@ -151,17 +150,17 @@ def predict_ball_target(frame, kf, ball_position, xd_array, yd_array, x_robot_co
     
     return frame, y_pred, xd_pred, yd_pred, is_going_to_bounce
 
-
 def delimit_field(frame):
     # First we make the image monochromatic
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     # Next we configure the ArUco detector
-    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
-    parameters =  cv2.aruco.DetectorParameters_create()
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
+    parameters =  cv2.aruco.DetectorParameters()
+    detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
     
     # Then we detect and draw the ArUcos
-    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+    corners, ids, rejectedImgPoints = detector.detectMarkers(gray)
     frame_markers = cv2.aruco.drawDetectedMarkers(frame.copy(), corners, ids)
     corners = np.array(corners, dtype=int)
     
@@ -181,4 +180,6 @@ def delimit_field(frame):
 
         return True, frame_markers, [top_left_corner, bottom_right_corner]
     return False, frame_markers, [[], []]
-    
+
+def y_robot_to_robot_position(y_robot, top_left_corner, bottom_right_corner):
+    return 0.5*(y_robot - top_left_corner[1])/(bottom_right_corner[1] - top_left_corner[1]) - 0.25

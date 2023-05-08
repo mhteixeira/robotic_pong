@@ -37,6 +37,30 @@ O projeto é dividido nas seguintes etapas, que podem ser vistas em detalhe ao c
 
 Para replicar o projeto, as instruções de instalação podem ser encontradas [aqui](https://sites.google.com/tecnico.ulisboa.pt/pip-pros/instala%C3%A7%C3%A3o-e-personaliza%C3%A7%C3%A3o).
 
+## Execução do código
+
+Create the virtual env:
+
+``` bash
+python -m venv ./venv
+```
+
+Activate the virtual env:
+``` bash
+.\venv\Scripts\activate
+```
+
+In the first time, install the requirements:
+``` bash
+pip install -r .\requirements.txt
+```
+
+Run the python file:
+``` bash
+pip 
+```
+
+
 ## Contato
 
 João Sequeira (joao.silva.sequeira@tecnico.ulisboa.pt)

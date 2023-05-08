@@ -3,7 +3,7 @@
 # Ball parameters
 greenLower = (20, 80, 6)
 greenUpper = (64, 255, 255)
-minimum_ball_area = 500
+minimum_ball_area = 400
 
 # Field parameters
 n_arucos = 2

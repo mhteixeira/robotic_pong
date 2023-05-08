@@ -6,15 +6,18 @@ from helpers import resize_image, \
 					is_ball_inside_field, \
 					line_limits, \
 					delimit_field, \
-					predict_ball_target
+					predict_ball_target, \
+					y_robot_to_robot_position
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from params import *
+from pyniryo import *
+from threading import Thread
 
 # Open the video or camera
 filename = './refactoring_cv/examples/example71.avi'
-cap = cv2.VideoCapture(filename)
-# cap = cv2.VideoCapture(1)
+# cap = cv2.VideoCapture(filename)
+cap = cv2.VideoCapture(1)
 
 # Check if camera opened successfully
 resize_factor = 100
@@ -58,13 +61,20 @@ while ((not is_field_delimited) and cap.isOpened()):
 			bottom_right_corner = corners[1]
 			field_height = bottom_right_corner[1] - top_left_corner[1]
 			x_robot_corner = bottom_right_corner[0]
-			output_frame = cv2.rectangle(output_frame, top_left_corner, bottom_right_corner, color=field_limits_rect_color, thickness=2)
+			output_frame = cv2.rectangle(output_frame, tuple(top_left_corner), tuple(bottom_right_corner), color=field_limits_rect_color, thickness=2)
 		cv2.imshow('Processed',output_frame)
 		# Press Q on keyboard to  exit
 		if cv2.waitKey(25) & 0xFF == ord('q'):
 			break
 	else: 
 		break
+
+# Initializing and calibrating the robot
+robot = NiryoRobot("169.254.200.200")
+robot.calibrate_auto()
+thread = Thread(target=robot.move_linear_pose, args=([0.3, 0.0, 0.1, 0.0, 1.57, 0.0]))
+thread.start()
+thread.join()
 
 # Start the processing
 while(cap.isOpened()):
@@ -81,7 +91,7 @@ while(cap.isOpened()):
 			bottom_right_corner = corners[1]
 			field_height = bottom_right_corner[1] - top_left_corner[1]
 			x_robot_corner = bottom_right_corner[0]
-		output_frame = cv2.rectangle(output_frame, top_left_corner, bottom_right_corner, color=field_limits_rect_color, thickness=2)
+		output_frame = cv2.rectangle(output_frame, tuple(top_left_corner), tuple(bottom_right_corner), color=field_limits_rect_color, thickness=2)
 
 		# Detect the ball
 		is_ball_detected, _, _, x, y, radius = detect_ball(frame, output_frame)
@@ -107,7 +117,12 @@ while(cap.isOpened()):
 			output_frame = cv2.line(output_frame, (top_left_corner[0], top_left_corner[1] + bounce_margin_size),  (bottom_right_corner[0], top_left_corner[1] + bounce_margin_size), color=(0, 0, 255), thickness=1)
 			output_frame = cv2.line(output_frame, (top_left_corner[0], bottom_right_corner[1] - bounce_margin_size), (bottom_right_corner[0], bottom_right_corner[1] - bounce_margin_size), color=(0, 0, 255), thickness=1)
 		output_frame = cv2.rectangle(output_frame, (int(x_robot_corner - 6), int(y_robot - 30)), (int(x_robot_corner + 6), int(y_robot + 30)), color=(255, 255, 255), thickness=-1)
-			
+		
+		robot_position = y_robot_to_robot_position(y_robot, top_left_corner, bottom_right_corner)
+		if not thread.is_alive():
+			thread = Thread(target=robot.move_linear_pose, args=([0.3, robot_position, 0.1, 0.0, 1.57, 0.0]))
+			thread.start()
+		
 		cv2.imshow('Processed', output_frame)
 		result.write(output_frame)
 		
@@ -119,6 +134,9 @@ while(cap.isOpened()):
 	else: 
 		break
  
+# Closing the connection with the robot
+robot.close_connection()
+
 # When everything done, release the video capture and video write objects
 cap.release()
 result.release()
