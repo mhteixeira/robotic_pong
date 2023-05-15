@@ -72,6 +72,7 @@ while ((not is_field_delimited) and cap.isOpened()):
 # Initializing and calibrating the robot
 robot = NiryoRobot("169.254.200.200")
 robot.calibrate_auto()
+robot.set_arm_max_velocity(100)
 thread = Thread(target=robot.move_linear_pose, args=([0.3, 0.0, 0.1, 0.0, 1.57, 0.0]))
 thread.start()
 thread.join()
@@ -124,7 +125,7 @@ while(cap.isOpened()):
 			thread.start()
 		
 		cv2.imshow('Processed', output_frame)
-		result.write(output_frame)
+		# result.write(output_frame)
 		
 		# Press Q on keyboard to  exit
 		if cv2.waitKey(25) & 0xFF == ord('q'):

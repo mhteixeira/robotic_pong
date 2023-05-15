@@ -57,7 +57,7 @@ pip install -r .\requirements.txt
 
 Run the python file:
 ``` bash
-pip 
+python ./refactoring_cv/main.py
 ```
 
 
