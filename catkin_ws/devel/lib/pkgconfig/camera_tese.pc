@@ -1,8 +1,0 @@
-prefix=/home/pedro/catkin_ws/devel
-
-Name: camera_tese
-Description: Description of camera_tese
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

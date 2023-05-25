@@ -16,7 +16,10 @@ from pyniryo2 import *
 # Open the video or camera
 filename = './refactoring_cv/examples/example71.avi'
 # cap = cv2.VideoCapture(filename)
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1024)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
 
 # Check if camera opened successfully
 resize_factor = 100
@@ -45,6 +48,7 @@ yd_array = []
 y_pred = h_frame/2
 y_preds = []
 send_command_to_robot_counter = 0
+robot_position = 0.0
 
 # Kalman filter
 kf = cv2.KalmanFilter(4, 2)
@@ -120,13 +124,15 @@ while(cap.isOpened()):
 			output_frame = cv2.line(output_frame, (top_left_corner[0], bottom_right_corner[1] - bounce_margin_size), (bottom_right_corner[0], bottom_right_corner[1] - bounce_margin_size), color=(0, 0, 255), thickness=1)
 		output_frame = cv2.rectangle(output_frame, (int(x_robot_corner - 6), int(y_robot - 30)), (int(x_robot_corner + 6), int(y_robot + 30)), color=(255, 255, 255), thickness=-1)
 		
-		robot_position = y_robot_to_robot_position(y_robot, top_left_corner, bottom_right_corner)
-		if send_command_to_robot_counter == 20:
-			# robot.arm.stop_move()
-			# robot.arm.stop_move()
-			robot.arm.move_linear_pose([0.3, robot_position, 0.1, 0.0, 1.57, 0.0], callback=lambda _: None)
+		new_robot_position = y_robot_to_robot_position(y_robot, top_left_corner, bottom_right_corner)
+		if abs(robot_position - new_robot_position) > 0.07:
+			robot.arm.stop_move()
+			robot.arm.stop_move()
+			robot.arm.move_linear_pose([0.3, new_robot_position, 0.1, 0.0, 1.57, 0.0], callback=lambda _: None)
 			send_command_to_robot_counter = 1
-		send_command_to_robot_counter += 1
+		elif abs(robot_position - new_robot_position) > 0.02:
+			robot.arm.move_linear_pose([0.3, new_robot_position, 0.1, 0.0, 1.57, 0.0], callback=lambda _: None)
+		robot_position = new_robot_position
 		
 		cv2.imshow('Processed', output_frame)
 		result.write(output_frame)
@@ -138,7 +144,6 @@ while(cap.isOpened()):
 	# Break the loop
 	else: 
 		break
- 
 # Closing the connection with the robot
 robot.end()
 

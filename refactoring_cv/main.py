@@ -15,9 +15,12 @@ from pyniryo import *
 from threading import Thread
 
 # Open the video or camera
-filename = './refactoring_cv/examples/example71.avi'
+# filename = './refactoring_cv/examples/example71.avi'
 # cap = cv2.VideoCapture(filename)
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1024)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 512)
 
 # Check if camera opened successfully
 resize_factor = 100
@@ -29,10 +32,15 @@ else:
 	h_frame, w_frame, _ = frame.shape
 	size = (w_frame, h_frame)
 
-result = cv2.VideoWriter(f'./refactoring_cv/examples/processed_{filename.split("/")[-1]}', 
-                         cv2.VideoWriter_fourcc(*'MJPG'),
-                         10, size)
+# result = cv2.VideoWriter(f'./refactoring_cv/examples/processed_{filename.split("/")[-1]}', 
+#                          cv2.VideoWriter_fourcc(*'MJPG'),
+#                          10, size)
+
+result = cv2.VideoWriter(f'./refactoring_cv/examples/processed_{int(time.time())}.avi', 
+cv2.VideoWriter_fourcc(*'MJPG'),
+10, size)
     
+
 # Initializing variables
 top_left_corner = np.array([])
 bottom_right_corner = np.array([])
@@ -68,14 +76,6 @@ while ((not is_field_delimited) and cap.isOpened()):
 			break
 	else: 
 		break
-
-# Initializing and calibrating the robot
-robot = NiryoRobot("169.254.200.200")
-robot.calibrate_auto()
-robot.set_arm_max_velocity(100)
-thread = Thread(target=robot.move_linear_pose, args=([0.3, 0.0, 0.1, 0.0, 1.57, 0.0]))
-thread.start()
-thread.join()
 
 # Start the processing
 while(cap.isOpened()):
@@ -120,9 +120,6 @@ while(cap.isOpened()):
 		output_frame = cv2.rectangle(output_frame, (int(x_robot_corner - 6), int(y_robot - 30)), (int(x_robot_corner + 6), int(y_robot + 30)), color=(255, 255, 255), thickness=-1)
 		
 		robot_position = y_robot_to_robot_position(y_robot, top_left_corner, bottom_right_corner)
-		if not thread.is_alive():
-			thread = Thread(target=robot.move_linear_pose, args=([0.3, robot_position, 0.1, 0.0, 1.57, 0.0]))
-			thread.start()
 		
 		cv2.imshow('Processed', output_frame)
 		# result.write(output_frame)
@@ -135,8 +132,6 @@ while(cap.isOpened()):
 	else: 
 		break
  
-# Closing the connection with the robot
-robot.close_connection()
 
 # When everything done, release the video capture and video write objects
 cap.release()

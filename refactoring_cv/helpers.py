@@ -40,12 +40,12 @@ def detect_ball(frame, output_frame):
     mask = cv2.inRange(hsv, greenLower, greenUpper)
 
     # Erode and dilate the result to remove small noises
-    mask = cv2.erode(mask, None, iterations=2)
-    mask = cv2.dilate(mask, None, iterations=2)
+    mask = cv2.erode(mask, None, iterations=4)
+    mask = cv2.dilate(mask, None, iterations=4)
     
     # Then we calculate the countours of the resulting image
     frame_cnts, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    # cv2.drawContours(output_frame, frame_cnts, -1, (0, 0, 255), 2)
+    cv2.drawContours(output_frame, frame_cnts, -1, (0, 0, 255), 2)
     
     if len(frame_cnts) > 0:
         # If we have contours, we get the one with the greatest area
@@ -57,10 +57,9 @@ def detect_ball(frame, output_frame):
 
         # Calculate the shape
         approx = cv2.approxPolyDP(c,0.01*cv2.arcLength(c,True),True)
-
         # If the shape is close to a circle and the area is greater than the minimum
         # the contour is considered to be the ball
-        if ((len(approx) > 6) & (len(approx) < 23) & (M["m00"] > minimum_ball_area)):
+        if ((len(approx) > 8) & (len(approx) < 23) & (M["m00"] > minimum_ball_area)):
             center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
             cv2.circle(output_frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
 
