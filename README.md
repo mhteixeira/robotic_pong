@@ -17,19 +17,19 @@ O projeto é dividido nas seguintes etapas, que podem ser vistas em detalhe ao c
 
 1. [Criação do setup](https://sites.google.com/tecnico.ulisboa.pt/pip-pros/etapas/setup-sugerido)
 
-    ![Setup](./images/setup.png)
+    ![Setup](./assets/images/setup.png)
 
 1. [Identificação do campo](https://sites.google.com/tecnico.ulisboa.pt/pip-pros/etapas/identifica%C3%A7%C3%A3o-do-campo)
 
-    ![Identificação do campo](./images/campo.png)
+    ![Identificação do campo](./assets/images/campo.png)
 
 1. [Detecção da bola](https://sites.google.com/tecnico.ulisboa.pt/pip-pros/etapas/detec%C3%A7%C3%A3o-da-bola)
 
-    ![Detecção da bola](./images/bola.png)
+    ![Detecção da bola](./assets/images/bola.png)
 
 1. [Predição da trajetória da bola](https://sites.google.com/tecnico.ulisboa.pt/pip-pros/etapas/predi%C3%A7%C3%A3o-da-trajet%C3%B3ria)
 
-    ![Predição da trajetória](./images/prediction.png)
+    ![Predição da trajetória](./assets/images/prediction.png)
 
 1. [Controlo do robô](https://sites.google.com/tecnico.ulisboa.pt/pip-pros/etapas/controlo-do-rob%C3%B4)
 

@@ -7,15 +7,16 @@ from helpers import resize_image, \
 					line_limits, \
 					delimit_field, \
 					predict_ball_target, \
-					y_robot_to_robot_position
+					y_robot_to_robot_position, \
+					non_blocking_move_linear_position
+
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from params import *
-from pyniryo import *
-from threading import Thread
+from pyniryo2 import *
 
 # Open the video or camera
-# filename = './refactoring_cv/examples/example71.avi'
+filename = './src/examples/example71.avi'
 # cap = cv2.VideoCapture(filename)
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
@@ -32,15 +33,13 @@ else:
 	h_frame, w_frame, _ = frame.shape
 	size = (w_frame, h_frame)
 
-# result = cv2.VideoWriter(f'./refactoring_cv/examples/processed_{filename.split("/")[-1]}', 
+# result = cv2.VideoWriter(f'./src/examples/processed_{filename.split("/")[-1]}', 
 #                          cv2.VideoWriter_fourcc(*'MJPG'),
 #                          10, size)
-
-result = cv2.VideoWriter(f'./refactoring_cv/examples/processed_{int(time.time())}.avi', 
-cv2.VideoWriter_fourcc(*'MJPG'),
-10, size)
+# result = cv2.VideoWriter(f'./src/examples/processed_{int(time.time())}.avi', 
+# cv2.VideoWriter_fourcc(*'MJPG'),
+# 10, size)
     
-
 # Initializing variables
 top_left_corner = np.array([])
 bottom_right_corner = np.array([])
@@ -50,6 +49,8 @@ xd_array = []
 yd_array = []
 y_pred = h_frame/2
 y_preds = []
+send_command_to_robot_counter = 0
+robot_position = 0.0
 
 # Kalman filter
 kf = cv2.KalmanFilter(4, 2)
@@ -76,6 +77,12 @@ while ((not is_field_delimited) and cap.isOpened()):
 			break
 	else: 
 		break
+
+# Initializing and calibrating the robot
+robot = NiryoRobot("169.254.200.200")
+robot.arm.calibrate_auto()
+robot.arm.set_arm_max_velocity(100)
+robot.arm.move_linear_pose([0.3, 0.00, 0.1, 0.0, 1.57, 0.0], callback=lambda _: None)
 
 # Start the processing
 while(cap.isOpened()):
@@ -119,7 +126,19 @@ while(cap.isOpened()):
 			output_frame = cv2.line(output_frame, (top_left_corner[0], bottom_right_corner[1] - bounce_margin_size), (bottom_right_corner[0], bottom_right_corner[1] - bounce_margin_size), color=(0, 0, 255), thickness=1)
 		output_frame = cv2.rectangle(output_frame, (int(x_robot_corner - 6), int(y_robot - 30)), (int(x_robot_corner + 6), int(y_robot + 30)), color=(255, 255, 255), thickness=-1)
 		
-		robot_position = y_robot_to_robot_position(y_robot, top_left_corner, bottom_right_corner)
+		new_robot_position = y_robot_to_robot_position(y_robot, top_left_corner, bottom_right_corner)
+		if abs(robot_position - new_robot_position) > 0.07:
+			robot.arm.stop_move()
+			time.sleep(0.001)
+			robot.arm.move_joints([new_robot_position, -1.552, 1.29, 0.0, -1.2, 0.0])
+			# robot.arm.move_pose([0.3, new_robot_position, 0.1, 0.0, 1.57, 0.0])
+			# non_blocking_move_linear_position(robot, [0.3, new_robot_position, 0.1, 0.0, 1.57, 0.0])
+			send_command_to_robot_counter = 1
+		elif abs(robot_position - new_robot_position) > 0.02:
+			robot.arm.move_joints([new_robot_position, -1.552, 1.29, 0.0, -1.2, 0.0])
+			# robot.arm.move_pose([0.3, new_robot_position, 0.1, 0.0, 1.57, 0.0])
+			# non_blocking_move_linear_position(robot, [0.3, new_robot_position, 0.1, 0.0, 1.57, 0.0])
+		robot_position = new_robot_position
 		
 		cv2.imshow('Processed', output_frame)
 		# result.write(output_frame)
@@ -131,11 +150,12 @@ while(cap.isOpened()):
 	# Break the loop
 	else: 
 		break
- 
+# Closing the connection with the robot
+robot.end()
 
 # When everything done, release the video capture and video write objects
 cap.release()
-result.release()
+# result.release()
 
 # Closes all the frames
 cv2.destroyAllWindows()

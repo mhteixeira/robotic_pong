@@ -1,6 +1,10 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*.bin
+*.exe
+*.dll
+*.lib
 
 # Distribution / packaging
 bin/
@@ -8,3 +12,6 @@ build/
 
 # Venv
 venv/
+
+# Documents
+*.pdf

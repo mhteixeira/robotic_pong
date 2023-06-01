@@ -1,8 +1,8 @@
 # Calibração
 
 # Ball parameters
-greenLower = (20, 80, 6)
-greenUpper = (64, 255, 255)
+greenLower = (20, 120, 6)
+greenUpper = (64, 200, 255)
 minimum_ball_area = 400
 
 # Field parameters
