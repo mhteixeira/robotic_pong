@@ -1,4 +1,5 @@
 # Calibração
+field_lenght_m = 0.64 # m
 
 # Ball parameters
 greenLower = (20, 100, 6)
@@ -6,7 +7,7 @@ greenUpper = (64, 220, 255)
 minimum_ball_area = 300
 
 # Field parameters
-n_arucos = 2
+n_arucos = 3
 bounce_margin_size = 40
 
 # Moving average parameters
