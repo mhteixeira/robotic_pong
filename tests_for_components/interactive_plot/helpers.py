@@ -194,5 +194,5 @@ def delimit_field(frame):
 def y_robot_to_robot_position(y_robot, top_left_corner, bottom_right_corner):
     return 1.2*(y_robot - top_left_corner[1])/(bottom_right_corner[1] - top_left_corner[1]) - 0.6
 
-def non_blocking_move_linear_position(robot, pose):
-    robot.arm._actions.get_move_linear_pose_goal(pose).send()
+def non_blocking_move_linear_position(robot, pose, callback=None):
+    robot.arm._actions.get_move_linear_pose_goal(pose).send(result_callback=callback)

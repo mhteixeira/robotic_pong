@@ -1,5 +1,10 @@
+import numpy as np
+
 # Calibração
 field_lenght_m = 0.64 # m
+aruco_0_pose = np.array([0.25, 0.28, 0.09, 0.0, 1.57, 0.0])
+aruco_1_pose = np.array([0.22, -0.32, 0.09, 0.0, 1.57, 0.0])
+hit_region = 80
 
 # Ball parameters
 ball_color_rgb = (169, 78, 60)
