@@ -2,22 +2,13 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.widgets import Slider, Button
-from helpers import detect_ball, is_ball_inside_field, non_blocking_move_linear_position
+from helpers import detect_ball, is_ball_inside_field, non_blocking_move_linear_position, warp_point, predict_target, custom_set_arm_max_velocity
 import sys
 import pickle
 from params import *
 import time
 from pyniryo2 import *
-
-######################
-# INITIALIZING NIRYO #
-######################
-
-robot = NiryoRobot("169.254.200.200")
-robot.arm.calibrate_auto()
-robot.arm.set_arm_max_velocity(100)
-non_blocking_move_linear_position(robot, (aruco_0_pose + aruco_1_pose)/2)
-final_pose = aruco_0_pose
+from enum import Enum
 
 ##############################
 # OPEN CV CAMERA CONFIGURING #
@@ -28,39 +19,89 @@ cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
 time.sleep(2)
+
 # Load camera calibration parameters
 file = open("./assets/calibration/calibration.pkl",'rb')
 cameraMatrix, dist = pickle.load(file)
+
 frame = None
 if (cap.isOpened()== False): 
 	print("Error opening video stream or file")
 else:
-	ret, frame = cap.read()
-	ret, frame = cap.read()
-	ret, frame = cap.read()
+	for _ in range(2):
+		ret, frame = cap.read()
 	h, w, _ = frame.shape
 
+# Undistorting the frame
 newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, (w,h), 1, (w,h))
 dst = cv2.undistort(frame, cameraMatrix, dist, None, newCameraMatrix)
 frame = dst[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
+
+############################################
+# CONFIGURING MENU TO CHOOSE THROWING MODE #
+############################################
+
+# Set the plot as interactive
+plt.ion()
+
+throwing_mode = None # 1 for Manual; 2 for Niryo
+
+def set_manual_mode(event):
+	global throwing_mode
+	throwing_mode = 1
+
+def set_arm_mode(event):
+	global throwing_mode
+	throwing_mode = 2
+
+fig, ax = plt.subplots(figsize=[4, 1.4])
+ax.set_title("Choose an operation mode")
+ax.axis('off')
+manual_button_ax = fig.add_axes([0.1, 0.2, 0.35, 0.4])
+manual_button = Button(manual_button_ax, 'Manual', hovercolor='0.975')
+manual_button.on_clicked(set_manual_mode)
+arm_button_ax = fig.add_axes([0.5, 0.2, 0.35, 0.4])
+arm_button = Button(arm_button_ax, 'Niryo', hovercolor='0.975')
+arm_button.on_clicked(set_arm_mode)
+plt.tight_layout()
+
+while throwing_mode == None:
+	if not plt.fignum_exists(1):
+		fig, ax = plt.subplots(figsize=[4, 1.4])
+		ax.set_title("Choose an operation mode")
+		ax.axis('off')
+		manual_button_ax = fig.add_axes([0.1, 0.2, 0.35, 0.4])
+		manual_button = Button(manual_button_ax, 'Manual', hovercolor='0.975')
+		manual_button.on_clicked(set_manual_mode)
+		arm_button_ax = fig.add_axes([0.5, 0.2, 0.35, 0.4])
+		arm_button = Button(arm_button_ax, 'Niryo', hovercolor='0.975')
+		arm_button.on_clicked(set_arm_mode)
+		plt.tight_layout()
+	plt.draw()
+	plt.pause(0.1)
+
+plt.close(fig)
 
 ################################
 # CONFIGURING INTERACTIVE PLOT #
 ################################
 
-plt.ion()
+# General plot configurations
 fig, ax = plt.subplots(figsize=[6, 4.2])
+
+# Close the program on pressing 'q'
 fig_is_active = True
 
-def on_press(event):
+def on_key_press(event):
 	global fig_is_active
 	sys.stdout.flush()
 	if event.key == 'q':
 		fig_is_active = False
+	
 
-fig.canvas.mpl_connect('key_press_event', on_press)
+fig.canvas.mpl_connect('key_press_event', on_key_press)
 
-# Make a horizontal slider to control the frequency.
+# Make a horizontal slider to control the angle to hit the ball
 slider_ax = fig.add_axes([0.28, 0.035, 0.2, 0.03])
 slider = Slider(
 	ax=slider_ax,
@@ -70,14 +111,7 @@ slider = Slider(
 	valinit = 0,
 )
 
-# The function to be calledq anytime a slider's value changes
-# def update(val):
-# 	print(slider.val)
-
-# register the update function with each slider
-# slider.on_changed(update)
-
-# Create a `matplotlib.widgets.Button` to reset the sliders to initial values.
+# Create a Button to throw the ball
 button_ax = fig.add_axes([0.705, 0.035, 0.15, 0.05])
 button = Button(button_ax, 'Throw ball!', hovercolor='0.975')
 
@@ -100,16 +134,14 @@ button.on_clicked(throw_ball)
 
 plt.suptitle("PIP-PRoS")
 ax.set_title("Initializing the program", color='gray', fontsize=10)
-ax.set_xticks([])
-ax.set_yticks([])
-
 output_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+button_ax.set_visible(False)
+slider_ax.set_visible(False)
 image_ax = ax.imshow(output_frame)
-
 plt.draw()
 plt.pause(0.01)
 
-######################q
+######################
 # IDENTIFYING ARUCOS #
 ######################
 
@@ -117,6 +149,7 @@ field_delimited = False
 
 # Transformation matrix for the homography
 M = None
+IM = None # The inverse of M
 max_width = None
 max_height = None
 
@@ -137,6 +170,7 @@ ax.set_title("Identifying the ArUcos", color='gray', fontsize=10)
 while not field_delimited:
 	succes, frame = cap.read()
 
+	# Undistorting the frame from the camera
 	dst = cv2.undistort(frame, cameraMatrix, dist, None, newCameraMatrix)
 	frame = dst[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
 	output_frame = dst.copy()
@@ -144,6 +178,7 @@ while not field_delimited:
 	# First we make the image monochromatic
 	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
+	# Then we detect the arucos
 	corners, ids, rejectedImgPoints = detector.detectMarkers(gray)
 	frame_markers = cv2.aruco.drawDetectedMarkers(frame.copy(), corners, ids)
 	corners = np.array(corners, dtype=int)
@@ -159,9 +194,9 @@ while not field_delimited:
 		bottom_right_corner_id = np.where(ids == 2)[0]
 
 		# The bottom right corner is identified by the Aruco with ID = 3
-		top_right_corner_id = np.where(ids == 3)[0]
+		top_right_corner_id = np.where(ids == 4)[0]
 
-		# The bottom right corner is identified by the Aruco with ID = 2
+		# The bottom right corner is identified by the Aruco with ID = 1
 		bottom_left_corner_id = np.where(ids == 1)[0]
 
 		top_left_corner = corners[top_left_corner_id][0][0][0]
@@ -169,24 +204,37 @@ while not field_delimited:
 		top_right_corner = corners[top_right_corner_id][0][0][0]
 		bottom_left_corner = corners[bottom_left_corner_id][0][0][0]
 
-		width_top = np.hypot(top_left_corner[0] - top_right_corner[0], top_left_corner[1] - top_right_corner[1])
-		width_bottom = np.hypot(bottom_left_corner[0] - bottom_right_corner[0], bottom_left_corner[1] - bottom_right_corner[1])
+		width_top = np.hypot(
+			top_left_corner[0] - top_right_corner[0], 
+			top_left_corner[1] - top_right_corner[1])
+		width_bottom = np.hypot(
+			bottom_left_corner[0] - bottom_right_corner[0], 
+			bottom_left_corner[1] - bottom_right_corner[1])
 		max_width = max(int(width_top), int(width_bottom))
-		height_left = np.hypot(top_left_corner[0] - bottom_left_corner[0], top_left_corner[1] - bottom_left_corner[1])
-		height_right = np.hypot(top_right_corner[0] - bottom_right_corner[0], top_right_corner[1] - bottom_right_corner[1])
+		
+		height_left = np.hypot(
+			top_left_corner[0] - bottom_left_corner[0], 
+			top_left_corner[1] - bottom_left_corner[1])
+		height_right = np.hypot(
+			top_right_corner[0] - bottom_right_corner[0], 
+			top_right_corner[1] - bottom_right_corner[1])
 		max_height = max(int(height_left), int(height_right))
 
-		input_pts = np.float32([top_left_corner, bottom_left_corner, bottom_right_corner, top_right_corner])
+		input_pts = np.float32([top_left_corner, 
+								bottom_left_corner, 
+								bottom_right_corner, 
+								top_right_corner])
 		output_pts = np.float32([[0, 0],
 								[0, max_height - 1],
 								[max_width - 1, max_height - 1],
 								[max_width - 1, 0]])
 
 		pixel_density = max_height/field_lenght_m
-
+		
 		# Compute the perspective transform M
 		M = cv2.getPerspectiveTransform(input_pts,output_pts)
-
+		_, IM = cv2.invert(M)
+	
 	output_frame = cv2.cvtColor(frame_markers, cv2.COLOR_BGR2RGB)
 	image_ax.set_data(output_frame)
 
@@ -198,30 +246,47 @@ while not field_delimited:
 		break
 	
 plt.pause(0.5)
-_, IM = cv2.invert(M)
+
+if not field_delimited:
+	sys.exit()
+
+
+######################
+# INITIALIZING NIRYO #
+######################
+
+if throwing_mode == 2:
+	robot = NiryoRobot("169.254.200.200")
+	robot.arm.calibrate_auto()
+	custom_set_arm_max_velocity(robot.arm, 200)
+	non_blocking_move_linear_position(robot, (aruco_0_pose + aruco_1_pose)/2)
+	final_pose = aruco_0_pose
 
 #############
 # MAIN LOOP #
-##############
+#############
 
-def warp_point(x: int, y: int, M):
-	d = M[2, 0] * x + M[2, 1] * y + M[2, 2]
+# Variables to deal with the movement prediction
+is_going_to_bounce = False
+xd_array = []
+yd_array = []
+y_preds = []
+y_pred = max_height/2
+x_robot_corner = max_width
 
-	return (
-		int((M[0, 0] * x + M[0, 1] * y + M[0, 2]) / d), # x
-		int((M[1, 0] * x + M[1, 1] * y + M[1, 2]) / d), # y
-	)
+# Kalman filter
+kf = cv2.KalmanFilter(4, 2)
+kf.measurementMatrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0]], np.float32)
+kf.transitionMatrix = np.array([[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0, 0, 1]], np.float32)
 
-
-previous_movement = None
-
+# Variables to deal with the ball throwing
 ready_to_throw = False
 ax.set_title("Put the ball inside the delimited region", color='red', fontsize=10)
 button_ax.set_visible(False)
 slider_ax.set_visible(False)
+previous_movement = None
 
 while True:
-
 	succes, frame = cap.read()
 
 	dst = cv2.undistort(frame, cameraMatrix, dist, None, newCameraMatrix)
@@ -233,42 +298,76 @@ while True:
 	homography = cv2.warpPerspective(frame,M,(max_width, max_height),flags=cv2.INTER_LINEAR)
 	homography = cv2.line(homography, (hit_region, 0), (hit_region, max_height), color=(0, 255, 255), thickness=1)
 	
+	# Detect the ball
 	is_ball_detected, _, _, x, y, radius = detect_ball(homography, homography)
-	ball_inside_hit_region = is_ball_inside_field(x, y, 0, 0, hit_region, max_height) if is_ball_detected else False
 	
-	if (ready_to_throw == False) and (ball_inside_hit_region == True):
-		ax.set_title("Ready to throw!", color='green', fontsize=10)
-		button_ax.set_visible(True)
-		slider_ax.set_visible(True)
-		ready_to_throw = True
-	elif (ready_to_throw == True) and (ball_inside_hit_region == False):
-		ax.set_title("Put the ball inside the delimited region", color='red', fontsize=10)
-		button_ax.set_visible(False)
-		slider_ax.set_visible(False)
-		ready_to_throw = False
+	# Check if the ball is inside the field (close to the wall)
+	if(is_going_to_bounce):
+		ball_inside_field = is_ball_inside_field(x, y, hit_region, bounce_margin_size, max_width, max_height - bounce_margin_size)
+	else:
+		ball_inside_field = is_ball_inside_field(x, y, hit_region, 0, max_width, max_height)
+	
+	# The prediction only makes sense if the ball is present
+	if (is_ball_detected and ball_inside_field):
+		homography, y_pred, xd_pred, yd_pred, is_going_to_bounce = predict_target(homography, kf, [x, y], xd_array, yd_array, x_robot_corner, max_width, max_height, y_preds, is_going_to_bounce, y_pred)
+		homography = cv2.arrowedLine(homography, (int(x), int(y)), (int(x+10*xd_pred), int(y+10*yd_pred)), (255, 0, 0), 2) 
+	else:
+		xd_array = []
+		yd_array = []
 
-	# Calculating arm trajectory to throw the ball
-	slope = np.tan(-np.deg2rad(slider.val))
-	initial_position = slope*(-int(x)) + int(y)
-	final_position = slope*(hit_region - int(x)) + int(y)
+	y_preds.append(y_pred)
+	y_robot = y_pred if len(y_preds) > 20 else np.mean(y_preds[-20:])
+	if (is_going_to_bounce):
+		homography = cv2.line(homography, (0, bounce_margin_size),  (max_width, bounce_margin_size), color=(0, 0, 255), thickness=1)
+		homography = cv2.line(homography, (0, max_height - bounce_margin_size), (max_width, max_height - bounce_margin_size), color=(0, 0, 255), thickness=1)
+	
+	if throwing_mode == 2:
+	
+		# Check if the ball is inside the hitting region
+		ball_inside_hit_region = is_ball_inside_field(x, y, 0, 0, hit_region, max_height) if is_ball_detected else False
+		if (ready_to_throw == False) and (ball_inside_hit_region == True):
+			ax.set_title("Ready to throw!", color='green', fontsize=10)
+			button_ax.set_visible(True)
+			slider_ax.set_visible(True)
+			ready_to_throw = True
+		elif (ready_to_throw == True) and (ball_inside_hit_region == False):
+			ax.set_title("Put the ball inside the delimited region", color='red', fontsize=10)
+			button_ax.set_visible(False)
+			slider_ax.set_visible(False)
+			ready_to_throw = False
 
-	initial_pose = aruco_0_pose + (aruco_1_pose - aruco_0_pose)*initial_position/max_height
-	final_pose = aruco_0_pose + (aruco_1_pose - aruco_0_pose)*final_position/max_height
-	final_pose[0] = 0.4
+		# Calculating arm trajectory to throw the ball
+		slope = np.tan(-np.deg2rad(slider.val))
+		initial_position = slope*(-int(x)) + int(y)
+		final_position = slope*(hit_region - int(x)) + int(y)
 
-	if ball_inside_hit_region and not throwing_movement_in_course:
-		if previous_movement:
-			movement = previous_movement - initial_position
-			if abs(movement) > 5:
+		initial_pose = aruco_0_pose + (aruco_1_pose - aruco_0_pose)*initial_position/max_height
+		final_pose = aruco_0_pose + (aruco_1_pose - aruco_0_pose)*final_position/max_height
+		final_pose[0] = 0.4
+
+		if ball_inside_hit_region and not throwing_movement_in_course:
+			if (initial_pose[1] > aruco_0_pose[1]) or (initial_pose[1] < aruco_1_pose[1]):
+				print("Invalid initial position: out of field")
+			initial_pose[1] = min(aruco_0_pose[1], initial_pose[1])
+			initial_pose[1] = max(aruco_1_pose[1], initial_pose[1])
+			
+			if (final_pose[1] > aruco_0_pose[1]) or (final_pose[1] < aruco_1_pose[1]):
+				print("Invalid final position: out of field")
+			final_pose[1] = min(aruco_0_pose[1], final_pose[1])
+			final_pose[1] = max(aruco_1_pose[1], final_pose[1])
+
+			if previous_movement:
+				movement = previous_movement - initial_position
+				if abs(movement) > 5:
+					robot.arm.stop_move()
+					time.sleep(0.001)
+					non_blocking_move_linear_position(robot, initial_pose)
+					previous_movement = initial_position
+			else:
 				robot.arm.stop_move()
 				time.sleep(0.001)
 				non_blocking_move_linear_position(robot, initial_pose)
 				previous_movement = initial_position
-		else:
-			robot.arm.stop_move()
-			time.sleep(0.001)
-			non_blocking_move_linear_position(robot, initial_pose)
-			previous_movement = initial_position
 
 	# Returning to the original frame
 	inversed_homography = cv2.warpPerspective(homography,IM,(w, h))
@@ -288,7 +387,8 @@ while True:
 		output_frame = cv2.circle(output_frame, (initial_pos_x, initial_pos_y), radius=2, color=(0, 0, 255), thickness=2)
 		final_pos_x, final_pos_y = warp_point(hit_region, int(final_position), IM)
 		output_frame = cv2.circle(output_frame, (final_pos_x, final_pos_y), radius=2, color=(0, 0, 255), thickness=2)
-		
+	x_robot, y_robot = warp_point(int(x_robot_corner), int(y_robot), IM)
+	output_frame = cv2.rectangle(output_frame, (int(x_robot - 6), int(y_robot - 30)), (int(x_robot + 6), int(y_robot + 30)), color=(255, 255, 255), thickness=-1)
 	
 	output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB)
 	image_ax.set_data(output_frame)
@@ -301,4 +401,5 @@ while True:
 		break
 
 # Closing the connection with the robot
-robot.end()
+if throwing_mode == 2:
+	robot.end()
