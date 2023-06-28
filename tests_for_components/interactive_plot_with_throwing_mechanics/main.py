@@ -9,6 +9,8 @@ from params import *
 import time
 from pyniryo2 import *
 from enum import Enum
+from motor_configs import *
+from threading import Thread
 
 ##############################
 # OPEN CV CAMERA CONFIGURING #
@@ -262,6 +264,14 @@ if throwing_mode == 2:
 	non_blocking_move_linear_position(robot, (aruco_0_pose + aruco_1_pose)/2)
 	final_pose = aruco_0_pose
 
+###########################
+# INITIALIZING EPOS MOTOR #
+###########################
+
+motor = MotorEPOS()
+thread = Thread(target=motor.move_to_position, args=([0.5]))
+thread.start()
+
 #############
 # MAIN LOOP #
 #############
@@ -273,6 +283,7 @@ yd_array = []
 y_preds = []
 y_pred = max_height/2
 x_robot_corner = max_width
+previous_y_robot = None
 
 # Kalman filter
 kf = cv2.KalmanFilter(4, 2)
@@ -317,14 +328,27 @@ while True:
 
 	y_preds.append(y_pred)
 	y_robot = y_pred if len(y_preds) > 20 else np.mean(y_preds[-20:])
+	
+	if not previous_y_robot:
+		previous_y_robot = y_robot
+	else:
+		if abs(y_robot - previous_y_robot) > 50:
+			if thread.is_alive():
+				motor.stop_motor_movement()
+				time.sleep(0.1)
+				thread.join()
+			thread = Thread(target=motor.move_to_position, args=([1 - y_robot/max_height]))
+			thread.start()
+			previous_y_robot = y_robot
+			
 	if (is_going_to_bounce):
 		homography = cv2.line(homography, (0, bounce_margin_size),  (max_width, bounce_margin_size), color=(0, 0, 255), thickness=1)
 		homography = cv2.line(homography, (0, max_height - bounce_margin_size), (max_width, max_height - bounce_margin_size), color=(0, 0, 255), thickness=1)
 	
 	if throwing_mode == 2:
-	
 		# Check if the ball is inside the hitting region
 		ball_inside_hit_region = is_ball_inside_field(x, y, 0, 0, hit_region, max_height) if is_ball_detected else False
+	
 		if (ready_to_throw == False) and (ball_inside_hit_region == True):
 			ax.set_title("Ready to throw!", color='green', fontsize=10)
 			button_ax.set_visible(True)
@@ -378,15 +402,16 @@ while True:
 	output_frame = cv2.line(output_frame, bottom_right_corner, top_right_corner, color=(100, 0, 0), thickness=2)
 	output_frame = cv2.line(output_frame, bottom_right_corner, bottom_left_corner, color=(100, 0, 0), thickness=2)
 	
-
-	# Direction of the throw
-	if ball_inside_hit_region:
-		x, y = warp_point(int(x), int(y), IM)
-		output_frame = cv2.arrowedLine(output_frame, (int(x), int(y)), (int(x+40*np.cos(-np.deg2rad(slider.val))), int(y+40*np.sin(-np.deg2rad(slider.val)))), (0, 0, 0), 2) 
-		initial_pos_x, initial_pos_y = warp_point(0, int(initial_position), IM)
-		output_frame = cv2.circle(output_frame, (initial_pos_x, initial_pos_y), radius=2, color=(0, 0, 255), thickness=2)
-		final_pos_x, final_pos_y = warp_point(hit_region, int(final_position), IM)
-		output_frame = cv2.circle(output_frame, (final_pos_x, final_pos_y), radius=2, color=(0, 0, 255), thickness=2)
+	if throwing_mode == 2:
+		# Direction of the throw
+		if ball_inside_hit_region:
+			x, y = warp_point(int(x), int(y), IM)
+			output_frame = cv2.arrowedLine(output_frame, (int(x), int(y)), (int(x+40*np.cos(-np.deg2rad(slider.val))), int(y+40*np.sin(-np.deg2rad(slider.val)))), (0, 0, 0), 2) 
+			initial_pos_x, initial_pos_y = warp_point(0, int(initial_position), IM)
+			output_frame = cv2.circle(output_frame, (initial_pos_x, initial_pos_y), radius=2, color=(0, 0, 255), thickness=2)
+			final_pos_x, final_pos_y = warp_point(hit_region, int(final_position), IM)
+			output_frame = cv2.circle(output_frame, (final_pos_x, final_pos_y), radius=2, color=(0, 0, 255), thickness=2)
+	
 	x_robot, y_robot = warp_point(int(x_robot_corner), int(y_robot), IM)
 	output_frame = cv2.rectangle(output_frame, (int(x_robot - 6), int(y_robot - 30)), (int(x_robot + 6), int(y_robot + 30)), color=(255, 255, 255), thickness=-1)
 	
@@ -400,6 +425,12 @@ while True:
 		plt.ioff()
 		break
 
+#######################
+# CLOSING CONNECTIONS #
+#######################
+
 # Closing the connection with the robot
 if throwing_mode == 2:
 	robot.end()
+
+motor.close()
