@@ -15,3 +15,6 @@ venv/
 
 # Documents
 *.pdf
+
+# Image examples for documentation
+assets/examples/
