@@ -10,11 +10,12 @@ hit_region = 80
 ball_color_rgb = (169, 78, 60)
 ball_color_hsv = (5, 165, 169)
 
-greenLower = (0, 80, 0)
-greenUpper = (20, 250, 200)
+ball_hsv_lower = (0, 80, 0)
+ball_hsv_upper = (20, 250, 200)
 
 # greenLower = (20, 100, 6)
 # greenUpper = (64, 220, 255)
+
 minimum_ball_area = 100
 maximum_ball_area = 1500
 

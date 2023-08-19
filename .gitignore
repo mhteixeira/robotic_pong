@@ -17,4 +17,4 @@ venv/
 *.pdf
 
 # Image examples for documentation
-assets/examples/
+# assets/examples/

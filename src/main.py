@@ -176,7 +176,7 @@ while not field_delimited:
 	dst = cv2.undistort(frame, cameraMatrix, dist, None, newCameraMatrix)
 	frame = dst[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
 	output_frame = dst.copy()
-	
+
 	# First we make the image monochromatic
 	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -296,7 +296,7 @@ if throwing_mode == 1:
 	ax.set_title("Manual ball control", color='black', fontsize=10)
 if throwing_mode == 2:
 	ax.set_title("Put the ball inside the delimited region", color='red', fontsize=10)
-q
+
 button_ax.set_visible(False)
 slider_ax.set_visible(False)
 previous_movement = None

@@ -35,11 +35,11 @@ def detect_ball(frame, output_frame):
 
     perimeters = np.array([cv2.arcLength(c,True) for c in frame_cnts])
 
-    circularities = 4 * np.pi *areas/(perimeters**2)
+    circularities = 4 * np.pi * areas/(perimeters**2)
     circularities = circularities*is_reading_valid
     ball_cnt_idx = np.argmax(circularities)
     # We get the one with the greatest circularity (4*pi*area/(perimeter^2))
-    # https://www.mathworks.com/help/images/identifying-round-objects.html;jsessionid=551254009a8e1c007e415ab76902
+    # https://www.mathworks.com/help/images/identifying-round-objects.html
     c = frame_cnts[ball_cnt_idx]
     # And calculate the minimum enclosing circle
     ((x, y), radius) = cv2.minEnclosingCircle(c)
@@ -50,7 +50,7 @@ def detect_ball(frame, output_frame):
 
     # If the shape is really close to a circle and the area is greater than the minimum
     # the contour is considered to be the ball
-    if ((len(approx) > 5) & (len(approx) < 23) & (M["m00"] > minimum_ball_area)):
+    if (len(approx) > 5) & (len(approx) < 23):
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
         cv2.circle(output_frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
 
