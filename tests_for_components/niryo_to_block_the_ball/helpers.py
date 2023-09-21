@@ -40,31 +40,48 @@ def detect_ball(frame, output_frame):
     mask = cv2.inRange(hsv, greenLower, greenUpper)
 
     # Erode and dilate the result to remove small noises
-    mask = cv2.erode(mask, None, iterations=4)
-    mask = cv2.dilate(mask, None, iterations=4)
+    mask = cv2.erode(mask, None, iterations=2)
+    mask = cv2.dilate(mask, None, iterations=2)
     
     # Then we calculate the countours of the resulting image
     frame_cnts, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    cv2.drawContours(output_frame, frame_cnts, -1, (0, 0, 255), 2)
+    # cv2.drawContours(output_frame, frame_cnts, -1, (0,0,255), 2)
+
+    if len(frame_cnts) == 0:
+        return False, output_frame, [], -1, -1, -1
+
+    # Calculate the circularity of the identified countours
+    areas = np.array([cv2.contourArea(c) for c in frame_cnts])
+    is_reading_valid = (areas > minimum_ball_area) & (areas < maximum_ball_area)
+
+    if np.sum(is_reading_valid) == 0:
+        return False, output_frame, [], -1, -1, -1
+
+    perimeters = np.array([cv2.arcLength(c,True) for c in frame_cnts])
+
+    circularities = 4 * np.pi * areas/(perimeters**2)
+    is_reading_valid = is_reading_valid & (circularities > 0.6)
+    circularities = circularities*is_reading_valid
+    ball_cnt_idx = np.argmax(circularities)
+    # We get the one with the greatest circularity (4*pi*area/(perimeter^2))
+    # https://www.mathworks.com/help/images/identifying-round-objects.html
     
-    if len(frame_cnts) > 0:
-        # If we have contours, we get the one with the greatest area
-        c = max(frame_cnts, key=cv2.contourArea)
-        
-        # And calculate the minimum enclosing circle
-        ((x, y), radius) = cv2.minEnclosingCircle(c)
-        M = cv2.moments(c)
+    c = frame_cnts[ball_cnt_idx]
+    # And calculate the minimum enclosing circle
+    ((x, y), radius) = cv2.minEnclosingCircle(c)
+    M = cv2.moments(c)
+    
+    # Calculate the shape
+    approx = cv2.approxPolyDP(c,0.01*cv2.arcLength(c,True),True)
 
-        # Calculate the shape
-        approx = cv2.approxPolyDP(c,0.01*cv2.arcLength(c,True),True)
-        # If the shape is close to a circle and the area is greater than the minimum
-        # the contour is considered to be the ball
-        if ((len(approx) > 8) & (len(approx) < 23) & (M["m00"] > minimum_ball_area)):
-            center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-            cv2.circle(output_frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
+    # If the shape is really close to a circle and the area is greater than the minimum
+    # the contour is considered to be the ball
+    if (len(approx) > 5) & (len(approx) < 23):
+        center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+        cv2.circle(output_frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
 
-            return True, output_frame, frame_cnts, x, y, radius
-    return False, output_frame, [], 0, 0, 0
+        return True, output_frame, frame_cnts, x, y, radius
+    return False, output_frame, [], -1, -1, -1
 
 def predict_ball_target(frame, kf, ball_position, xd_array, yd_array, x_robot_corner, top_left_corner, bottom_right_corner, y_preds, is_going_to_bounce, current_pred):
     # Kalman predictions

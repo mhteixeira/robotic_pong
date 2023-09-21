@@ -16,7 +16,7 @@ from params import *
 from pyniryo2 import *
 
 # Open the video or camera
-filename = './src/examples/example71.avi'
+# filename = './src/examples/example71.avi'
 # cap = cv2.VideoCapture(filename)
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
@@ -63,6 +63,8 @@ is_field_delimited = False
 while ((not is_field_delimited) and cap.isOpened()):
 	ret, frame = cap.read()
 	if ret == True:
+		# RotationMatrix = cv2.getRotationMatrix2D((w_frame/2, h_frame/2), 180, 1)
+		# frame = cv2.warpAffine(frame, RotationMatrix, (w_frame, h_frame))
 		frame = resize_image(frame, resize_factor)
 		is_field_delimited, output_frame, corners = delimit_field(frame)
 		if (is_field_delimited):
@@ -78,16 +80,33 @@ while ((not is_field_delimited) and cap.isOpened()):
 	else: 
 		break
 
+print("Field delimited")
+
 # Initializing and calibrating the robot
-robot = NiryoRobot("169.254.200.200")
+robot = NiryoRobot("10.10.10.10")
+# print("Robot connected")
 robot.arm.calibrate_auto()
-robot.arm.set_arm_max_velocity(100)
-robot.arm.move_linear_pose([0.3, 0.00, 0.15, 0.0, 1.57, 0.0], callback=lambda _: None)
+# print("Robot calibrated")
+
+def custom_set_arm_max_velocity(arm, percentage_speed):
+        arm._check_range_belonging(percentage_speed, 1, 200)
+        req = arm._services.get_max_velocity_scaling_factor_request(percentage_speed)
+        resp = arm._services.set_max_velocity_scaling_factor_service.call(req)
+        arm._check_result_status(resp)
+
+custom_set_arm_max_velocity(robot.arm, 200)
+# robot.arm.set_arm_max_velocity(100)
+# print("Speed set")
+# robot.arm.move_linear_pose([0.3, 0.00, 0.15, 0.0, 1.57, 0.0], callback=lambda _: None)	
+robot.arm.move_joints([0, -1.552, 1.29, 0.0, -1.2, 0.0], callback=lambda _: None)
+# print("Arm positioned")
 
 # Start the processing
 while(cap.isOpened()):
 	ret, frame = cap.read()
 	if ret == True:
+		# RotationMatrix = cv2.getRotationMatrix2D((w_frame/2, h_frame/2), 180, 1)
+		# frame = cv2.warpAffine(frame, RotationMatrix, (w_frame, h_frame))
 		frame = resize_image(frame, resize_factor)
 		h_frame, w_frame, _ = frame.shape
 
@@ -109,7 +128,7 @@ while(cap.isOpened()):
 			ball_inside_field = is_ball_inside_field(x, y, top_left_corner[0], top_left_corner[1] + bounce_margin_size, bottom_right_corner[0], bottom_right_corner[1] - bounce_margin_size)
 		else:
 			ball_inside_field = is_ball_inside_field(x, y, top_left_corner[0], top_left_corner[1], bottom_right_corner[0], bottom_right_corner[1])
-		
+
 		# The prediction only makes sense if the ball is present
 		if (is_ball_detected and ball_inside_field):
 			output_frame, y_pred, xd_pred, yd_pred, is_going_to_bounce = predict_ball_target(output_frame, kf, [x, y], xd_array, yd_array, x_robot_corner, top_left_corner, bottom_right_corner, y_preds, is_going_to_bounce, y_pred)
@@ -120,7 +139,7 @@ while(cap.isOpened()):
 			yd_array = []
 		
 		y_preds.append(y_pred)
-		y_robot = y_pred if len(y_preds) > 20 else np.mean(y_preds[-20:])
+		y_robot = y_pred if len(y_preds) > 20 else np.mean(y_preds[-10:])
 		if (is_going_to_bounce):
 			output_frame = cv2.line(output_frame, (top_left_corner[0], top_left_corner[1] + bounce_margin_size),  (bottom_right_corner[0], top_left_corner[1] + bounce_margin_size), color=(0, 0, 255), thickness=1)
 			output_frame = cv2.line(output_frame, (top_left_corner[0], bottom_right_corner[1] - bounce_margin_size), (bottom_right_corner[0], bottom_right_corner[1] - bounce_margin_size), color=(0, 0, 255), thickness=1)
@@ -130,12 +149,12 @@ while(cap.isOpened()):
 		if abs(robot_position - new_robot_position) > 0.07:
 			robot.arm.stop_move()
 			time.sleep(0.001)
-			robot.arm.move_joints([new_robot_position, -1.552, 1.29, 0.0, -1.2, 0.0])
+			robot.arm.move_joints([new_robot_position, -1.552, 1.29, 0.0, -1.2, 0.0], callback=lambda _: None)
 			# robot.arm.move_pose([0.3, new_robot_position, 0.15, 0.0, 1.57, 0.0])
 			# non_blocking_move_linear_position(robot, [0.3, new_robot_position, 0.15, 0.0, 1.57, 0.0])
 			send_command_to_robot_counter = 1
 		elif abs(robot_position - new_robot_position) > 0.02:
-			robot.arm.move_joints([new_robot_position, -1.552, 1.29, 0.0, -1.2, 0.0])
+			robot.arm.move_joints([new_robot_position, -1.552, 1.29, 0.0, -1.2, 0.0], callback=lambda _: None)
 			# robot.arm.move_pose([0.3, new_robot_position, 0.15, 0.0, 1.57, 0.0])
 			# non_blocking_move_linear_position(robot, [0.3, new_robot_position, 0.15, 0.0, 1.57, 0.0])
 		robot_position = new_robot_position

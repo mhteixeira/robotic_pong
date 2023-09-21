@@ -118,12 +118,12 @@ def predict_target(frame, kf, ball_position, xd_array, yd_array, x_robot_corner,
                         current_x = next_x
                         current_y = next_y
                     image = cv2.line(frame, (int(current_x), int(current_y)), (int(x_robot_corner), int(y_pred)), predict_line_color, 1)     
+            
             elif initial_y_pred > bottom_right_corner[1]:
-
                 overshoot_y = abs(initial_y_pred - bottom_right_corner[1])
                 number_of_refletions = np.ceil(abs(overshoot_y / field_height)).astype(int)
                 
-                if number_of_refletions <= max_number_of_refletions:
+                if number_of_reflemaxtions <= max_number_of_refletions:
                     if (number_of_refletions % 2 == 1):
                         y_pred = bottom_right_corner[1] - (overshoot_y % field_height)
                     if (number_of_refletions % 2 == 0):
