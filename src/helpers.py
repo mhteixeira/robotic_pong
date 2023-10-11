@@ -11,36 +11,35 @@ def detect_ball(frame, output_frame):
     # First we blur the image with a GaussianBlur
     blurred = cv2.GaussianBlur(frame, (11, 11), 0)
     
-    # Construct a HSV mask for the green color
+    # Construct a HSV mask for the ball color
     hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv, greenLower, greenUpper)
+    mask = cv2.inRange(hsv, ball_hsv_lower, ball_hsv_upper)
 
     # Erode and dilate the result to remove small noises
-    mask = cv2.erode(mask, None, iterations=2)
-    mask = cv2.dilate(mask, None, iterations=2)
+    mask_post_processed = cv2.erode(mask, None, iterations=4)
+    mask_post_processed = cv2.dilate(mask_post_processed, None, iterations=4)
     
     # Then we calculate the countours of the resulting image
-    frame_cnts, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    # cv2.drawContours(output_frame, frame_cnts, -1, (0,0,255), 2)
+    cnts, _ = cv2.findContours(mask_post_processed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)    # cv2.drawContours(output_frame, frame_cnts, -1, (0,0,255), 2)
 
-    if len(frame_cnts) == 0:
+    if len(cnts) == 0:
         return False, output_frame, [], -1, -1, -1
 
     # Calculate the circularity of the identified countours
-    areas = np.array([cv2.contourArea(c) for c in frame_cnts])
+    areas = np.array([cv2.contourArea(c) for c in cnts])
     is_reading_valid = (areas > minimum_ball_area) & (areas < maximum_ball_area)
 
     if np.sum(is_reading_valid) == 0:
         return False, output_frame, [], -1, -1, -1
 
-    perimeters = np.array([cv2.arcLength(c,True) for c in frame_cnts])
+    perimeters = np.array([cv2.arcLength(c,True) for c in cnts])
 
     circularities = 4 * np.pi * areas/(perimeters**2)
-    circularities = circularities*is_reading_valid
+    circularities = circularities * is_reading_valid
     ball_cnt_idx = np.argmax(circularities)
     # We get the one with the greatest circularity (4*pi*area/(perimeter^2))
     # https://www.mathworks.com/help/images/identifying-round-objects.html
-    c = frame_cnts[ball_cnt_idx]
+    c = cnts[ball_cnt_idx]
     # And calculate the minimum enclosing circle
     ((x, y), radius) = cv2.minEnclosingCircle(c)
     M = cv2.moments(c)
@@ -54,7 +53,7 @@ def detect_ball(frame, output_frame):
         center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
         cv2.circle(output_frame, (int(x), int(y)), int(radius), (0, 255, 0), 2)
 
-        return True, output_frame, frame_cnts, x, y, radius
+        return True, output_frame, cnts, x, y, radius
     return False, output_frame, [], -1, -1, -1
 
 def non_blocking_move_linear_position(robot, pose, callback=None):
@@ -123,7 +122,7 @@ def predict_target(frame, kf, ball_position, xd_array, yd_array, x_robot_corner,
                 overshoot_y = abs(initial_y_pred - bottom_right_corner[1])
                 number_of_refletions = np.ceil(abs(overshoot_y / field_height)).astype(int)
                 
-                if number_of_reflemaxtions <= max_number_of_refletions:
+                if number_of_refletions <= max_number_of_refletions:
                     if (number_of_refletions % 2 == 1):
                         y_pred = bottom_right_corner[1] - (overshoot_y % field_height)
                     if (number_of_refletions % 2 == 0):

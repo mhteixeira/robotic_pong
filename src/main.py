@@ -1,16 +1,19 @@
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
+
+import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button
-from helpers import detect_ball, is_ball_inside_field, non_blocking_move_linear_position, warp_point, predict_target, custom_set_arm_max_velocity
-import sys
-import pickle
-from params import *
-import time
+
 from pyniryo2 import *
-from enum import Enum
-from motor_configs import *
-from threading import Thread
+
+import pickle
+import serial
+import time
+import sys
+
+from params import *
+from helpers import detect_ball, is_ball_inside_field, non_blocking_move_linear_position, warp_point, predict_target, custom_set_arm_max_velocity
+from SerialStepperMotor import SerialStepperMotor
 
 ##############################
 # OPEN CV CAMERA CONFIGURING #
@@ -253,6 +256,17 @@ if not field_delimited:
 	sys.exit()
 
 
+################################
+# INITIALIZING SERIAL TO MOTOR #
+################################
+print(serial_port_motor)
+motor = SerialStepperMotor(serial_port_motor, baudrate_motor, pos_min_motor, pos_max_motor)
+
+if not motor.is_connected():
+	sys.exit()
+
+motor.move_to(0.5)
+
 ######################
 # INITIALIZING NIRYO #
 ######################
@@ -264,13 +278,6 @@ if throwing_mode == 2:
 	non_blocking_move_linear_position(robot, (aruco_0_pose + aruco_1_pose)/2)
 	final_pose = aruco_0_pose
 
-###########################
-# INITIALIZING EPOS MOTOR #
-###########################
-
-motor = MotorEPOS()
-thread = Thread(target=motor.move_to_position, args=([0.5]))
-thread.start()
 
 #############
 # MAIN LOOP #
@@ -337,12 +344,9 @@ while True:
 		previous_y_robot = y_robot
 	else:
 		if abs(y_robot - previous_y_robot) > 50:
-			if thread.is_alive():
-				motor.stop_motor_movement()
-				time.sleep(0.1)
-				thread.join()
-			thread = Thread(target=motor.move_to_position, args=([1 - y_robot/max_height]))
-			thread.start()
+			motor.stop()
+			position_percentage = y_robot/max_height
+			motor.move_to(position_percentage)
 			previous_y_robot = y_robot
 			
 	if (is_going_to_bounce):
@@ -386,11 +390,11 @@ while True:
 
 			if previous_movement:
 				movement = previous_movement - initial_position
-				if abs(movement) > 5:
-					robot.arm.stop_move()
-					time.sleep(0.001)
-					non_blocking_move_linear_position(robot, initial_pose)
-					previous_movement = initial_position
+				# if abs(movement) > 5:
+				robot.arm.stop_move()
+				time.sleep(0.001)
+				non_blocking_move_linear_position(robot, initial_pose)
+				previous_movement = initial_position
 			else:
 				robot.arm.stop_move()
 				time.sleep(0.001)
@@ -437,4 +441,6 @@ while True:
 if throwing_mode == 2:
 	robot.end()
 
+motor.move_to(0)
+time.sleep(1)
 motor.close()

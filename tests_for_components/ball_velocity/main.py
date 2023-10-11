@@ -77,7 +77,7 @@ while(cap.isOpened()):
 						previous_y = y
 						previous_time = current_time
 					else:
-						if counter >= 5:
+						if counter >= 6:
 							current_time = time.time()
 							# print("dt:", current_time - previous_time)
 							# print("dx:", (x - previous_x)/pixel_density)

@@ -1,5 +1,11 @@
 import numpy as np
 
+# Motor configurations
+serial_port_motor = "COM8"
+baudrate_motor = 115200
+pos_min_motor = 0
+pos_max_motor = 2700
+
 # Calibração
 field_lenght_m = 0.64 # m
 aruco_0_pose = np.array([0.14, 0.28, 0.09, 0.0, 1.57, 0.0])
