@@ -2,8 +2,8 @@
 
 // Define a stepper and the pins it will use
 AccelStepper stepper(1, 8, 9);
-const float initial_max_speed     = 500.0;      // In RPM
-const float initial_acceleration  = 2000.0;      // In RPM/s
+const float initial_max_speed     = 10.0;      // In RPM
+const float initial_acceleration  = 100.0;      // In RPM/s
 const int steps_per_revolution  = 400;      // Before altering this value, check the controller and alter the value there
 
 int upper_limit = 800;
@@ -46,7 +46,7 @@ void loop()
     {
       case 't':
         unstuck_procedure_started = true;
-        initial_calibration_time = millis();
+        stepper.move(100);
         break;
       case 'i':
         Serial.println("Starting calibration, wait for it to finish...");
