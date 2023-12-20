@@ -53,105 +53,107 @@ frame = dst[roi[1]:roi[1]+roi[3], roi[0]:roi[0]+roi[2]]
 # CONFIGURING MENU TO CHOOSE THROWING MODE #
 ############################################
 
-# Set the plot as interactive
-plt.ion()
+# # Set the plot as interactive
+# plt.ion()
 
-throwing_mode = None # 1 for Manual; 2 for Niryo
+# throwing_mode = None # 1 for Manual; 2 for Niryo
 
-def set_manual_mode(event):
-	global throwing_mode
-	throwing_mode = 1
+# def set_manual_mode(event):
+# 	global throwing_mode
+# 	throwing_mode = 1
 
-def set_arm_mode(event):
-	global throwing_mode
-	throwing_mode = 2
+# def set_arm_mode(event):
+# 	global throwing_mode
+# 	throwing_mode = 2
 
-fig, ax = plt.subplots(figsize=[4, 1.4])
-ax.set_title("Choose an operation mode")
-ax.axis('off')
-manual_button_ax = fig.add_axes([0.1, 0.2, 0.35, 0.4])
-manual_button = Button(manual_button_ax, 'Manual', hovercolor='0.975')
-manual_button.on_clicked(set_manual_mode)
-arm_button_ax = fig.add_axes([0.5, 0.2, 0.35, 0.4])
-arm_button = Button(arm_button_ax, 'Niryo', hovercolor='0.975')
-arm_button.on_clicked(set_arm_mode)
-plt.tight_layout()
+# fig, ax = plt.subplots(figsize=[4, 1.4])
+# ax.set_title("Choose an operation mode")
+# ax.axis('off')
+# manual_button_ax = fig.add_axes([0.1, 0.2, 0.35, 0.4])
+# manual_button = Button(manual_button_ax, 'Manual', hovercolor='0.975')
+# manual_button.on_clicked(set_manual_mode)
+# arm_button_ax = fig.add_axes([0.5, 0.2, 0.35, 0.4])
+# arm_button = Button(arm_button_ax, 'Niryo', hovercolor='0.975')
+# arm_button.on_clicked(set_arm_mode)
+# plt.tight_layout()
 
-while throwing_mode == None:
-	if not plt.fignum_exists(1):
-		fig, ax = plt.subplots(figsize=[4, 1.4])
-		ax.set_title("Choose an operation mode")
-		ax.axis('off')
-		manual_button_ax = fig.add_axes([0.1, 0.2, 0.35, 0.4])
-		manual_button = Button(manual_button_ax, 'Manual', hovercolor='0.975')
-		manual_button.on_clicked(set_manual_mode)
-		arm_button_ax = fig.add_axes([0.5, 0.2, 0.35, 0.4])
-		arm_button = Button(arm_button_ax, 'Niryo', hovercolor='0.975')
-		arm_button.on_clicked(set_arm_mode)
-		plt.tight_layout()
-	plt.draw()
-	plt.pause(0.1)
+# while throwing_mode == None:
+# 	if not plt.fignum_exists(1):
+# 		fig, ax = plt.subplots(figsize=[4, 1.4])
+# 		ax.set_title("Choose an operation mode")
+# 		ax.axis('off')
+# 		manual_button_ax = fig.add_axes([0.1, 0.2, 0.35, 0.4])
+# 		manual_button = Button(manual_button_ax, 'Manual', hovercolor='0.975')
+# 		manual_button.on_clicked(set_manual_mode)
+# 		arm_button_ax = fig.add_axes([0.5, 0.2, 0.35, 0.4])
+# 		arm_button = Button(arm_button_ax, 'Niryo', hovercolor='0.975')
+# 		arm_button.on_clicked(set_arm_mode)
+# 		plt.tight_layout()
+# 	plt.draw()
+# 	plt.pause(0.1)
 
-plt.close(fig)
+# plt.close(fig)
+
+throwing_mode = 1
 
 ################################
 # CONFIGURING INTERACTIVE PLOT #
 ################################
 
-# General plot configurations
-fig, ax = plt.subplots(figsize=[6, 4.2])
+# # General plot configurations
+# fig, ax = plt.subplots(figsize=[6, 4.2])
 
-# Close the program on pressing 'q'
-fig_is_active = True
+# # Close the program on pressing 'q'
+# fig_is_active = True
 
-def on_key_press(event):
-	global fig_is_active
-	sys.stdout.flush()
-	if event.key == 'q':
-		fig_is_active = False
+# def on_key_press(event):
+# 	global fig_is_active
+# 	sys.stdout.flush()
+# 	if event.key == 'q':
+# 		fig_is_active = False
 	
 
-fig.canvas.mpl_connect('key_press_event', on_key_press)
+# fig.canvas.mpl_connect('key_press_event', on_key_press)
 
-# Make a horizontal slider to control the angle to hit the ball
-slider_ax = fig.add_axes([0.28, 0.035, 0.2, 0.03])
-slider = Slider(
-	ax=slider_ax,
-	label='Angle (°)  ',
-	valmin = -45,
-	valmax = 45,
-	valinit = 0,
-)
+# # Make a horizontal slider to control the angle to hit the ball
+# slider_ax = fig.add_axes([0.28, 0.035, 0.2, 0.03])
+# slider = Slider(
+# 	ax=slider_ax,
+# 	label='Angle (°)  ',
+# 	valmin = -45,
+# 	valmax = 45,
+# 	valinit = 0,
+# )
 
-# Create a Button to throw the ball
-button_ax = fig.add_axes([0.705, 0.035, 0.15, 0.05])
-button = Button(button_ax, 'Throw ball!', hovercolor='0.975')
+# # Create a Button to throw the ball
+# button_ax = fig.add_axes([0.705, 0.035, 0.15, 0.05])
+# button = Button(button_ax, 'Throw ball!', hovercolor='0.975')
 
-throwing_movement_in_course = False
+# throwing_movement_in_course = False
 
-def update_throwing_flag(_):
-	print('Movement completed')
-	throwing_movement_in_course = False
-	non_blocking_move_linear_position(robot, initial_pose)
+# def update_throwing_flag(_):
+# 	print('Movement completed')
+# 	throwing_movement_in_course = False
+# 	non_blocking_move_linear_position(robot, initial_pose)
 
-def throw_ball(event):
-	global final_pose
-	throwing_movement_in_course = True
-	print("Throwing the ball")
-	robot.arm.stop_move()
-	time.sleep(0.001)
-	non_blocking_move_linear_position(robot, final_pose, callback=update_throwing_flag)
+# def throw_ball(event):
+# 	global final_pose
+# 	throwing_movement_in_course = True
+# 	print("Throwing the ball")
+# 	robot.arm.stop_move()
+# 	time.sleep(0.001)
+# 	non_blocking_move_linear_position(robot, final_pose, callback=update_throwing_flag)
 
-button.on_clicked(throw_ball)
+# button.on_clicked(throw_ball)
 
-plt.suptitle("PIP-PRoS")
-ax.set_title("Initializing the program", color='gray', fontsize=10)
-output_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-button_ax.set_visible(False)
-slider_ax.set_visible(False)
-image_ax = ax.imshow(output_frame)
-plt.draw()
-plt.pause(0.01)
+# plt.suptitle("PIP-PRoS")
+# ax.set_title("Initializing the program", color='gray', fontsize=10)
+# output_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+# button_ax.set_visible(False)
+# slider_ax.set_visible(False)
+# image_ax = ax.imshow(output_frame)
+# plt.draw()
+# plt.pause(0.01)
 
 ######################
 # IDENTIFYING ARUCOS #
@@ -177,7 +179,7 @@ aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
 parameters =  cv2.aruco.DetectorParameters()
 detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
 
-ax.set_title("Identifying the ArUcos", color='gray', fontsize=10)
+# ax.set_title("Identifying the ArUcos", color='gray', fontsize=10)
 
 while not field_delimited:
 	succes, frame = cap.read()
@@ -248,17 +250,17 @@ while not field_delimited:
 		_, IM = cv2.invert(M)
 	
 	output_frame = cv2.cvtColor(frame_markers, cv2.COLOR_BGR2RGB)
-	image_ax.set_data(output_frame)
+	# image_ax.set_data(output_frame)
 
-	if fig_is_active:
-		plt.draw()
-		plt.pause(0.01)
-	else:
-		plt.ioff()
-		break
+	# if fig_is_active:
+	# 	plt.draw()
+	# 	plt.pause(0.01)
+	# else:
+	# 	plt.ioff()
+	# 	break
 
-ax.set_title("Calibrating motor...", color='gray', fontsize=10)	
-plt.pause(0.5)
+# ax.set_title("Calibrating motor...", color='gray', fontsize=10)	
+# plt.pause(0.5)
 
 if not field_delimited:
 	sys.exit()
@@ -273,7 +275,7 @@ motor = SerialStepperMotor(serial_port_motor, baudrate_motor)
 if not motor.is_connected():
 	sys.exit()
 
-# motor.calibrate()
+motor.calibrate()
 
 ######################
 # INITIALIZING NIRYO #
@@ -306,13 +308,13 @@ kf.transitionMatrix = np.array([[1, 0, 1, 0], [0, 1, 0, 1], [0, 0, 1, 0], [0, 0,
 
 # Variables to deal with the ball throwing
 ready_to_throw = False
-if throwing_mode == 1:
-	ax.set_title("Manual ball control", color='black', fontsize=10)
-if throwing_mode == 2:
-	ax.set_title("Put the ball inside the delimited region", color='red', fontsize=10)
+# if throwing_mode == 1:
+# 	ax.set_title("Manual ball control", color='black', fontsize=10)
+# if throwing_mode == 2:
+# 	ax.set_title("Put the ball inside the delimited region", color='red', fontsize=10)
 
-button_ax.set_visible(False)
-slider_ax.set_visible(False)
+# button_ax.set_visible(False)
+# slider_ax.set_visible(False)
 previous_movement = None
 
 while True:
@@ -379,14 +381,14 @@ while True:
 		ball_inside_hit_region = is_ball_inside_field(x, y, 0, 0, hit_region, max_height) if is_ball_detected else False
 	
 		if (ready_to_throw == False) and (ball_inside_hit_region == True):
-			ax.set_title("Ready to throw!", color='green', fontsize=10)
-			button_ax.set_visible(True)
-			slider_ax.set_visible(True)
+			# ax.set_title("Ready to throw!", color='green', fontsize=10)
+			# button_ax.set_visible(True)
+			# slider_ax.set_visible(True)
 			ready_to_throw = True
 		elif (ready_to_throw == True) and (ball_inside_hit_region == False):
-			ax.set_title("Put the ball inside the delimited region", color='red', fontsize=10)
-			button_ax.set_visible(False)
-			slider_ax.set_visible(False)
+			# ax.set_title("Put the ball inside the delimited region", color='red', fontsize=10)
+			# button_ax.set_visible(False)
+			# slider_ax.set_visible(False)
 			ready_to_throw = False
 
 		# Calculating arm trajectory to throw the ball
@@ -445,14 +447,15 @@ while True:
 	output_frame = cv2.rectangle(output_frame, (int(x_robot - 6), int(y_robot - 30)), (int(x_robot + 6), int(y_robot + 30)), color=(255, 255, 255), thickness=-1)
 	
 	output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB)
-	image_ax.set_data(output_frame)
+	# image_ax.set_data(output_frame)
 
-	if fig_is_active:
-		plt.draw()
-		plt.pause(0.01)
-	else:
-		plt.ioff()
-		break
+	
+	# if fig_is_active:
+	# 	plt.draw()
+	# 	plt.pause(0.01)
+	# else:
+	# 	plt.ioff()
+	# 	break
 
 	t_plot = time.time()
 	processing_times.append([
@@ -466,11 +469,13 @@ while True:
 		t_plot
 	])
 
+	print("read")
+
 #######################
 # CLOSING CONNECTIONS #
 #######################
 
-filename = 'main_normal_plot_13_11.txt'
+filename = 'main_wo_threading.txt'
 with open(filename, 'w') as f:
     for line in processing_times:
         print(*line, sep=", ", file=f)

@@ -10,7 +10,7 @@ greenLower = (20, 80, 6)
 greenUpper = (64, 255, 255)
 
 cap = cv2.VideoCapture('refactoring_cv/examples/example3.avi')
- 
+
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
   print("Error opening video stream or file")

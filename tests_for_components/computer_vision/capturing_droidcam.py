@@ -4,7 +4,6 @@
 import cv2
 import time
 import glob
-import re
 
 time.sleep(2)
 # Create an object to read 

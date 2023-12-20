@@ -14,6 +14,7 @@ import sys
 from params import *
 from helpers import detect_ball, is_ball_inside_field, non_blocking_move_linear_position, warp_point, predict_target, custom_set_arm_max_velocity
 from SerialStepperMotor import SerialStepperMotor
+from VideoCaptureThreading import VideoCaptureThreading
 
 #####################################
 # INTERNAL PARAMETERS FOR DEBUGGING #
@@ -27,9 +28,11 @@ processing_times = []
 ##############################
 
 h, w = 640, 480
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+# cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+# cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+# cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+cap = VideoCaptureThreading(0, w, h)
+cap.start()
 time.sleep(2)
 
 # Load camera calibration parameters
@@ -37,12 +40,12 @@ file = open("./assets/calibration/calibration.pkl",'rb')
 cameraMatrix, dist = pickle.load(file)
 
 frame = None
-if (cap.isOpened()== False): 
-	print("Error opening video stream or file")
-else:
-	for _ in range(2):
-		ret, frame = cap.read()
-	h, w, _ = frame.shape
+# if (cap.isOpened()== False): 
+# 	print("Error opening video stream or file")
+# else:
+for _ in range(2):
+	ret, frame = cap.read()
+h, w, _ = frame.shape
 
 # Undistorting the frame
 newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, (w,h), 1, (w,h))
@@ -273,7 +276,7 @@ motor = SerialStepperMotor(serial_port_motor, baudrate_motor)
 if not motor.is_connected():
 	sys.exit()
 
-# motor.calibrate()
+motor.calibrate()
 
 ######################
 # INITIALIZING NIRYO #
@@ -447,13 +450,6 @@ while True:
 	output_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB)
 	image_ax.set_data(output_frame)
 
-	if fig_is_active:
-		plt.draw()
-		plt.pause(0.01)
-	else:
-		plt.ioff()
-		break
-
 	t_plot = time.time()
 	processing_times.append([
 		is_ball_detected,
@@ -466,14 +462,23 @@ while True:
 		t_plot
 	])
 
+	if fig_is_active:
+		plt.draw()
+		plt.pause(0.01)
+	else:
+		plt.ioff()
+		break
+
 #######################
 # CLOSING CONNECTIONS #
 #######################
 
-filename = 'main_normal_plot_13_11.txt'
+filename = 'main_w_threading.txt'
 with open(filename, 'w') as f:
     for line in processing_times:
         print(*line, sep=", ", file=f)
+
+cap.stop()
 
 # Closing the connection with the robot
 if throwing_mode == 2:
