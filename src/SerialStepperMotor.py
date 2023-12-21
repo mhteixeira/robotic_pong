@@ -44,7 +44,7 @@ class SerialStepperMotor:
         print("Sent: p")
 
 # # Use example
-# motor = SerialStepperMotor("COM8", 115200, 0, 2700)
+# motor = SerialStepperMotor("COM8", 115200)
 # print(motor.is_connected())
 # motor.calibrate()
 # time.sleep(10)
